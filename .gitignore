@@ -1,0 +1,7 @@
+dist-newstyle/
+.lake/
+site/
+*.log
+
+# LLM investigation notes (local only)
+.llm/
