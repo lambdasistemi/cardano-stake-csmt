@@ -25,6 +25,6 @@
 
 ## Finalization
 
-- [ ] T415 Run `nix develop -c just ci` at HEAD.
-- [ ] T416 Update the draft PR body with delivered behavior, proof commands, and residual risks.
-- [ ] T417 Drop `gate.sh` in the final ready-for-review commit and mark PR #14 ready.
+- [x] T415 Run `nix develop -c just ci` at HEAD.
+- [x] T416 Update the draft PR body with delivered behavior, proof commands, and residual risks.
+- [x] T417 Drop `gate.sh` in the final ready-for-review commit and mark PR #14 ready.
