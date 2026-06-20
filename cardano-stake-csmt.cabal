@@ -72,6 +72,7 @@ library library
   exposed-modules:
     Cardano.StakeCSMT.Application.Health
     Cardano.StakeCSMT.Ledger.Config
+    Cardano.StakeCSMT.Ledger.Replay
 
   build-depends:
     , aeson
@@ -145,6 +146,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.Application.HealthSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
+    Cardano.StakeCSMT.Ledger.ReplaySpec
 
   build-depends:
     , base                       <5
