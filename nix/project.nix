@@ -1,7 +1,24 @@
-{ indexState, pkgs }:
+{
+  CHaP,
+  indexState,
+  pkgs,
+}:
 
 let
   shell = import ./shell.nix { inherit indexState; };
+  fix-libs =
+    { lib, pkgs, ... }:
+    {
+      packages.cardano-crypto-praos.flags.external-libsodium-vrf = false;
+      packages.cardano-crypto-praos.components.library.pkgconfig = lib.mkForce [ [ pkgs.libsodium ] ];
+      packages.cardano-crypto-class.components.library.pkgconfig = lib.mkForce [
+        [
+          pkgs.libsodium
+          pkgs.secp256k1
+          pkgs.blst
+        ]
+      ];
+    };
   mkProject =
     { pkgs, ... }:
     {
@@ -10,6 +27,7 @@ let
       compiler-nix-name = "ghc9123";
       shell = shell { inherit pkgs; };
       modules = [
+        fix-libs
         (
           { ... }:
           {
@@ -17,6 +35,9 @@ let
           }
         )
       ];
+      inputMap = {
+        "https://chap.intersectmbo.org/" = CHaP;
+      };
     };
   project = pkgs.haskell-nix.cabalProject' mkProject;
 in

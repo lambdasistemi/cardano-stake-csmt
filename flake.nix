@@ -10,6 +10,10 @@
     haskellNix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    CHaP = {
+      url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
+      flake = false;
+    };
   };
 
   outputs =
@@ -18,6 +22,7 @@
       nixpkgs,
       flake-utils,
       haskellNix,
+      CHaP,
       ...
     }:
     let
@@ -27,11 +32,23 @@
       system:
       let
         pkgs = import nixpkgs {
-          overlays = [ haskellNix.overlay ];
+          overlays = [
+            haskellNix.overlay
+            (final: prev: {
+              haskell-nix = prev.haskell-nix // {
+                extraPkgconfigMappings = (prev.haskell-nix.extraPkgconfigMappings or { }) // {
+                  libsodium = [ "libsodium" ];
+                  libsecp256k1 = [ "secp256k1" ];
+                  libblst = [ "blst" ];
+                };
+              };
+            })
+          ];
           inherit system;
         };
         project = import ./nix/project.nix {
           indexState = "2026-05-01T00:00:00Z";
+          inherit CHaP;
           inherit pkgs;
         };
       in
