@@ -7,3 +7,7 @@
 - [X] T303 Vendor the devnet genesis fixture under `test/fixtures/devnet-genesis/`.
 - [X] T304 Add a unit spec that loads the fixture, asserts the genesis ledger state can be obtained, and queries epoch `0` without LSQ or networking.
 - [X] T305 Run `./gate.sh`, commit the slice with subject `feat: add ledger config loader`, and include trailer `Tasks: T301, T302, T303, T304, T305`.
+
+## Slice 2 - Fresh Cabal CI CHaP Access
+
+- [ ] T306 Make fresh Cabal CI resolve CHaP without runner-global Cabal state while preserving haskell.nix CHaP input mapping.
