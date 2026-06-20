@@ -2,11 +2,11 @@
 
 ## Slice 1 - Pure Replay Core
 
-- [ ] T401 Add `Cardano.StakeCSMT.Ledger.Replay` with the public replay state, epoch transition type, initial state constructor, and `replayBlock` implemented with consensus `tickThenReapply`.
-- [ ] T402 Preserve ledger table values after each reapply using the consensus table-diff utilities.
-- [ ] T403 Add unit coverage for replay state initialization and epoch callback de-duplication.
-- [ ] T404 Expose the module and test module in `cardano-stake-csmt.cabal` / `test/main.hs`.
-- [ ] T405 Run the focused replay unit test and `./gate.sh`, then commit with subject `feat: add ledger replay core` and trailer `Tasks: T401, T402, T403, T404, T405`.
+- [X] T401 Add `Cardano.StakeCSMT.Ledger.Replay` with the public replay state, epoch transition type, initial state constructor, and `replayBlock` implemented with consensus `tickThenReapply`.
+- [X] T402 Preserve ledger table values after each reapply using the consensus table-diff utilities.
+- [X] T403 Add unit coverage for replay state initialization and epoch callback de-duplication.
+- [X] T404 Expose the module and test module in `cardano-stake-csmt.cabal` / `test/main.hs`.
+- [X] T405 Run the focused replay unit test and `./gate.sh`, then commit with subject `feat: add ledger replay core` and trailer `Tasks: T401, T402, T403, T404, T405`.
 
 ## Slice 2 - N2C Replay Follower
 
