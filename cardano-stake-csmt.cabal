@@ -1,0 +1,145 @@
+cabal-version:   3.4
+name:            cardano-stake-csmt
+version:         0.1.0.0
+synopsis:        Stake CSMT service scaffold
+description:
+  Initial scaffold for a Cardano stake Compact Sparse Merkle Tree service.
+  This package currently exposes only health and readiness endpoints.
+
+license:         Apache-2.0
+license-file:    LICENSE
+author:          Lambda Sistemi
+maintainer:      engineering@lambdasistemi.com
+category:        Cardano
+build-type:      Simple
+extra-doc-files:
+  CHANGELOG.md
+  LICENSE.note
+
+flag werror
+  description: Enable -Werror
+  manual:      True
+  default:     False
+
+common warnings
+  ghc-options:
+    -Wall -Wunused-imports -Wunused-packages -Wmissing-export-lists
+    -Wname-shadowing -Wdeferred-out-of-scope-variables
+    -Wpartial-type-signatures -Wredundant-constraints
+
+  if flag(werror)
+    ghc-options: -Werror
+
+  default-extensions:
+    DataKinds
+    DerivingStrategies
+    DuplicateRecordFields
+    FlexibleContexts
+    FlexibleInstances
+    GADTs
+    GeneralizedNewtypeDeriving
+    ImportQualifiedPost
+    LambdaCase
+    MultiParamTypeClasses
+    NamedFieldPuns
+    NumericUnderscores
+    OverloadedStrings
+    PatternSynonyms
+    RankNTypes
+    RecordWildCards
+    ScopedTypeVariables
+    StandaloneDeriving
+    StrictData
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    ViewPatterns
+
+library
+  -- Thin main library required for haskell.nix compatibility.
+  import:           warnings
+  default-language: Haskell2010
+  build-depends:
+    , base                      <5
+    , cardano-stake-csmt:library
+
+library library
+  import:           warnings
+  visibility:       public
+  hs-source-dirs:   lib
+  default-language: Haskell2010
+  exposed-modules:
+    Cardano.StakeCSMT.Application.Health
+
+  build-depends:
+    , base <5
+    , text
+
+library http
+  import:           warnings
+  visibility:       public
+  hs-source-dirs:   http
+  default-language: Haskell2010
+  exposed-modules:
+    Cardano.StakeCSMT.HTTP.API
+    Cardano.StakeCSMT.HTTP.Server
+
+  build-depends:
+    , base                       <5
+    , bytestring
+    , cardano-stake-csmt:library
+    , http-types
+    , text
+    , wai
+    , warp
+
+library application
+  import:           warnings
+  visibility:       public
+  hs-source-dirs:   application
+  default-language: Haskell2010
+  exposed-modules:
+    Cardano.StakeCSMT.Application.Run.Config
+    Cardano.StakeCSMT.Application.Run.Main
+
+  build-depends:
+    , base                    <5
+    , cardano-stake-csmt:http
+
+executable cardano-stake-csmt
+  import:           warnings
+  ghc-options:      -threaded -rtsopts -with-rtsopts=-N
+  main-is:          executables/cardano-stake-csmt/main.hs
+  default-language: Haskell2010
+  build-depends:
+    , base                           <5
+    , cardano-stake-csmt:application
+
+test-suite unit-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          main.hs
+  hs-source-dirs:   test
+  default-language: Haskell2010
+  other-modules:
+    Cardano.StakeCSMT.Application.HealthSpec
+    Cardano.StakeCSMT.HTTP.ServerSpec
+
+  build-depends:
+    , base                       <5
+    , cardano-stake-csmt:http
+    , cardano-stake-csmt:library
+    , hspec
+    , http-types
+
+test-suite e2e-tests
+  import:           warnings
+  type:             exitcode-stdio-1.0
+  main-is:          main.hs
+  hs-source-dirs:   e2e-test
+  default-language: Haskell2010
+  build-depends:
+    , base                           <5
+    , cardano-stake-csmt:application
+    , hspec

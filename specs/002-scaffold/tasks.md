@@ -2,10 +2,10 @@
 
 ## Slice 1 - Haskell and Nix scaffold
 
-- [ ] T001 Create the Cabal package with the agreed component map and `Cardano.StakeCSMT.*` namespace.
-- [ ] T002 Add minimal health/readiness Haskell modules, executable, unit tests, and e2e smoke tests without domain logic.
-- [ ] T003 Add `flake.nix`, `nix/project.nix`, `nix/shell.nix`, `cabal.project`, `justfile`, Fourmolu, HLint, and `LICENSE`.
-- [ ] T004 Run `./gate.sh` and commit with subject `feat: scaffold haskell and nix project`.
+- [X] T001 Create the Cabal package with the agreed component map and `Cardano.StakeCSMT.*` namespace.
+- [X] T002 Add minimal health/readiness Haskell modules, executable, unit tests, and e2e smoke tests without domain logic.
+- [X] T003 Add `flake.nix`, `nix/project.nix`, `nix/shell.nix`, `cabal.project`, `justfile`, Fourmolu, HLint, and `LICENSE`.
+- [X] T004 Run `./gate.sh` and commit with subject `feat: scaffold haskell and nix project`.
 
 ## Slice 2 - Docs, Speckit, and CI
 
