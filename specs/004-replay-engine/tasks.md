@@ -18,10 +18,10 @@
 
 ## Slice 3 - Devnet Replay Proof
 
-- [ ] T411 Add a devnet replay e2e proof that replays a chain to tip without error.
-- [ ] T412 Assert the proof observed at least one replayed block and did not duplicate epoch-transition callbacks.
-- [ ] T413 Keep the proof within replay scope: no snapshot extraction, CSMT, history database, rollback persistence, or HTTP changes.
-- [ ] T414 Run `nix develop --quiet -c just e2e` and `./gate.sh`, then commit with subject `test: prove replay against devnet chainsync` and trailer `Tasks: T411, T412, T413, T414`.
+- [x] T411 Add a devnet replay e2e proof that replays a chain to tip without error.
+- [x] T412 Assert the proof observed at least one replayed block and did not duplicate epoch-transition callbacks.
+- [x] T413 Keep the proof within replay scope: no snapshot extraction, CSMT, history database, rollback persistence, or HTTP changes.
+- [x] T414 Run `nix develop --quiet -c just e2e` and `./gate.sh`, then commit with subject `test: prove replay against devnet chainsync` and trailer `Tasks: T411, T412, T413, T414`.
 
 ## Finalization
 

@@ -6,6 +6,7 @@ import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
     , defaultConfig
     )
+import Cardano.StakeCSMT.E2E.ReplaySpec qualified as ReplaySpec
 import Test.Hspec
     ( describe
     , hspec
@@ -15,11 +16,12 @@ import Test.Hspec
 
 main :: IO ()
 main =
-    hspec
-        $ describe "cardano-stake-csmt executable scaffold"
-        $ it "uses the default HTTP port"
-        $ configPort defaultConfig
-        `shouldBe` configPort expectedConfig
+    hspec $ do
+        describe "cardano-stake-csmt executable scaffold"
+            $ it "uses the default HTTP port"
+            $ configPort defaultConfig
+            `shouldBe` configPort expectedConfig
+        ReplaySpec.spec
   where
     expectedConfig :: RuntimeConfig
     expectedConfig = RuntimeConfig{configPort = 8080}

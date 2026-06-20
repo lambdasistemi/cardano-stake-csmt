@@ -221,8 +221,11 @@ mkReplayFollower intersector replayAction state =
         { rollForward = \fetched _tip -> do
             nextState <- replayAction state (fetchedBlock fetched)
             pure $ mkReplayFollower intersector replayAction nextState
-        , rollBackward = \_point ->
-            pure $ Reset intersector
+        , rollBackward = \case
+            Network.Point Network.Point.Origin ->
+                pure $ Progress $ mkReplayFollower intersector replayAction state
+            Network.Point (Network.Point.At _) ->
+                pure $ Reset intersector
         }
 
 originPoint :: HeaderPoint
