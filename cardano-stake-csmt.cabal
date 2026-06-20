@@ -73,6 +73,7 @@ library library
     Cardano.StakeCSMT.Application.Health
     Cardano.StakeCSMT.Ledger.Config
     Cardano.StakeCSMT.Ledger.Replay
+    Cardano.StakeCSMT.Ledger.StakeSnapshot
 
   build-depends:
     , aeson
@@ -91,6 +92,7 @@ library library
     , cardano-node-clients
     , chain-follower
     , contra-tracer
+    , containers
     , filepath
     , mtl
     , ouroboros-consensus:cardano
@@ -99,6 +101,7 @@ library library
     , ouroboros-network:api
     , text
     , transformers
+    , vector-map
 
 library http
   import:           warnings
@@ -151,13 +154,16 @@ test-suite unit-tests
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
     Cardano.StakeCSMT.Ledger.ReplaySpec
+    Cardano.StakeCSMT.Ledger.StakeSnapshotSpec
 
   build-depends:
     , base                       <5
     , cardano-stake-csmt:http
     , cardano-stake-csmt:library
+    , cardano-ledger-core
     , cardano-node-clients
     , chain-follower
+    , containers
     , hspec
     , http-types
     , ouroboros-network:api
