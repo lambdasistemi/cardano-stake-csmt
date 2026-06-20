@@ -21,6 +21,7 @@ import Cardano.StakeCSMT.Ledger.Replay
 import ChainFollower
     ( Follower (..)
     , Intersector (..)
+    , ProgressOrRewind (..)
     )
 import Data.IORef
     ( modifyIORef'
@@ -112,8 +113,24 @@ spec =
                     follower0 <-
                         intersectFound
                             (Network.Point Network.Point.Origin)
+                    followerAfterOriginRollback <-
+                        rollBackward
+                            follower0
+                            (Network.Point Network.Point.Origin)
+                            >>= \case
+                                Progress follower ->
+                                    pure follower
+                                Rewind _ _ ->
+                                    fail
+                                        "expected origin rollback to progress, got rewind"
+                                Reset _ ->
+                                    fail
+                                        "expected origin rollback to progress, got reset"
                     follower1 <-
-                        rollForward follower0 unusedFetched unusedTip
+                        rollForward
+                            followerAfterOriginRollback
+                            unusedFetched
+                            unusedTip
                     _follower2 <-
                         rollForward follower1 unusedFetched unusedTip
                     pure (Right ())

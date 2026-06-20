@@ -1,11 +1,23 @@
 {
   CHaP,
+  cardano-node-pkgs,
   indexState,
   pkgs,
 }:
 
 let
   shell = import ./shell.nix { inherit indexState; };
+  shellWithCardanoNode =
+    { pkgs, ... }:
+    let
+      baseShell = shell { inherit pkgs; };
+    in
+    baseShell
+    // {
+      buildInputs = (baseShell.buildInputs or [ ]) ++ [
+        cardano-node-pkgs.cardano-node
+      ];
+    };
   fix-libs =
     { lib, pkgs, ... }:
     {
@@ -25,7 +37,7 @@ let
       name = "cardano-stake-csmt";
       src = ./..;
       compiler-nix-name = "ghc9123";
-      shell = shell { inherit pkgs; };
+      shell = shellWithCardanoNode { inherit pkgs; };
       modules = [
         fix-libs
         (

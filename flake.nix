@@ -10,6 +10,7 @@
     haskellNix.url = "github:input-output-hk/haskell.nix";
     nixpkgs.follows = "haskellNix/nixpkgs-unstable";
     flake-utils.url = "github:numtide/flake-utils";
+    cardano-node.url = "github:IntersectMBO/cardano-node/11.0.1";
     CHaP = {
       url = "github:intersectmbo/cardano-haskell-packages?ref=repo";
       flake = false;
@@ -22,6 +23,7 @@
       nixpkgs,
       flake-utils,
       haskellNix,
+      cardano-node,
       CHaP,
       ...
     }:
@@ -50,6 +52,7 @@
           indexState = "2026-05-01T00:00:00Z";
           inherit CHaP;
           inherit pkgs;
+          cardano-node-pkgs = cardano-node.packages.${system};
         };
       in
       {

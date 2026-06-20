@@ -168,7 +168,14 @@ test-suite e2e-tests
   main-is:          main.hs
   hs-source-dirs:   e2e-test
   default-language: Haskell2010
+  other-modules:
+    Cardano.StakeCSMT.E2E.ReplaySpec
+
   build-depends:
     , base                           <5
     , cardano-stake-csmt:application
+    , cardano-stake-csmt:library
+    , cardano-node-clients:devnet
+    , filepath
     , hspec
+    , ouroboros-network:api
