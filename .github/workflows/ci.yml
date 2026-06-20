@@ -10,11 +10,72 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   build-gate:
     name: Build Gate
     runs-on: nixos
     steps:
       - uses: actions/checkout@v6
-      - name: Stub CI
-        run: echo "CI stub — replaced by real CI in the scaffold PR"
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+      - name: Realize Haskell outputs and dev shell
+        run: |
+          nix build --quiet \
+            .#packages.x86_64-linux.cardano-stake-csmt \
+            .#packages.x86_64-linux.unit-tests \
+            .#packages.x86_64-linux.e2e-tests \
+            .#devShells.x86_64-linux.default
+
+  ci-build:
+    name: CI build
+    runs-on: nixos
+    needs: build-gate
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+      - name: Build and test
+        run: |
+          nix develop --quiet -c just build
+          nix develop --quiet -c just unit
+          nix develop --quiet -c just e2e
+
+  ci-format:
+    name: CI format
+    runs-on: nixos
+    needs: build-gate
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+      - name: Check formatting
+        run: nix develop --quiet -c just format-check
+
+  ci-hlint:
+    name: CI hlint
+    runs-on: nixos
+    needs: build-gate
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+      - name: Run HLint
+        run: nix develop --quiet -c just hlint
+
+  docs-build:
+    name: Docs build
+    runs-on: nixos
+    steps:
+      - uses: actions/checkout@v6
+      - uses: cachix/cachix-action@v17
+        with:
+          name: paolino
+      - name: Build documentation
+        run: nix develop github:paolino/dev-assets?dir=mkdocs --quiet -c mkdocs build --strict --site-dir site
