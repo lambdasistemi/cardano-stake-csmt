@@ -10,4 +10,4 @@
 
 ## Slice 2 - Fresh Cabal CI CHaP Access
 
-- [ ] T306 Make the CI build job use flake-owned Haskell outputs so it does not depend on runner-global Cabal indexes for CHaP.
+- [X] T306 Make the CI build job use flake-owned Haskell outputs so it does not depend on runner-global Cabal indexes for CHaP.
