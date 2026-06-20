@@ -41,9 +41,10 @@ jobs:
           name: paolino
       - name: Build and test
         run: |
-          nix develop --quiet -c just build
-          nix develop --quiet -c just unit
-          nix develop --quiet -c just e2e
+          nix build --quiet \
+            .#packages.x86_64-linux.cardano-stake-csmt \
+            .#packages.x86_64-linux.unit-tests \
+            .#packages.x86_64-linux.e2e-tests
 
   ci-format:
     name: CI format
