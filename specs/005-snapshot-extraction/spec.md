@@ -13,7 +13,7 @@ As the stake CSMT service, at each epoch boundary I can extract the ledger's mar
 - The snapshot source is the mark snapshot: `ssStakeMark` from `esSnapshots (nesEs newEpochState)`.
 - The credential map is materialized as `Credential 'Staking -> Coin`, converting compact stake values to `Coin`.
 - `totalStake` is computed from exactly the extracted mark stake values, not reconstructed from certificates and not read from pool distribution.
-- Unit coverage loads the known devnet genesis ledger state and asserts the extracted stake snapshot and total against the configured genesis delegation/funds.
+- Unit coverage loads the known devnet genesis ledger state and asserts the extracted mark snapshot and total from the decoded ledger state. The current fixture's initial funds are not tied to the configured staking credential, so its decoded mark active stake is empty; the extractor must not reconstruct stake from genesis delegation data.
 
 ## Functional Requirements
 
