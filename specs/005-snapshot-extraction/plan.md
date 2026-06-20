@@ -25,7 +25,7 @@ For each Shelley-based `NewEpochState`, extract:
 stake = ssStake (ssStakeMark (esSnapshots (nesEs nes)))
 ```
 
-Materialize `unStake stake` into a strict `Map (Credential 'Staking) Coin` with `Data.VMap.toMap` and `fromCompact`. Compute `totalStake` from the same `Stake` value, preferably with `sumAllStake`.
+Materialize the returned active stake into a strict `Map (Credential 'Staking) Coin` with `Data.VMap.toMap` and compact stake conversion. Compute `totalStake` from the same extracted values.
 
 ## Cabal Surface
 
@@ -38,11 +38,11 @@ Add `test/Cardano/StakeCSMT/Ledger/StakeSnapshotSpec.hs` and import it from `tes
 The focused test loads `test/fixtures/devnet-genesis` with `loadLedgerConfig`, extracts from `ledgerConfigGenesisState`, and checks:
 
 - extraction succeeds for the Shelley-based genesis state,
-- the snapshot contains the known genesis stake credential,
+- the snapshot matches the decoded `ssStakeMark` from that ledger state,
 - `totalStake` equals the sum of the returned credential stake map,
-- the total matches the known devnet genesis delegated funds.
+- the current fixture returns an empty credential map and `Coin 0`, because its initial funds are not associated with the configured staking credential and production extraction must not reconstruct stake from genesis delegation data.
 
-If the exact credential constructor is cumbersome, assert the single-entry map and total from the decoded ledger state rather than string-rendering the credential.
+Do not add a fallback to genesis JSON, certificates, UTxO reconstruction, pool distribution, LSQ, or replay in this slice.
 
 ## Slice Plan
 
