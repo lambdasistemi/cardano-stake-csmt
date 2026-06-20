@@ -10,4 +10,4 @@
 
 ## Slice 2 - Fresh Cabal CI CHaP Access
 
-- [ ] T306 Make fresh Cabal CI resolve CHaP without runner-global Cabal state while preserving haskell.nix CHaP input mapping.
+- [ ] T306 Make the CI build job use flake-owned Haskell outputs so it does not depend on runner-global Cabal indexes for CHaP.
