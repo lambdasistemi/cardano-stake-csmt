@@ -2,6 +2,9 @@ module Cardano.StakeCSMT.Ledger.ReplaySpec
     ( spec
     ) where
 
+import Cardano.Node.Client.N2C.ChainSync
+    ( Fetched (..)
+    )
 import Cardano.StakeCSMT.Ledger.Config
     ( LedgerConfigBundle (..)
     , ledgerConfigPathsFromDirectory
@@ -9,18 +12,30 @@ import Cardano.StakeCSMT.Ledger.Config
     )
 import Cardano.StakeCSMT.Ledger.Replay
     ( EpochTransition (..)
+    , ReplayFollowerConfig (..)
     , ReplayState (..)
     , initialReplayState
     , observeEpochTransition
+    , runReplayFollowerWith
+    )
+import ChainFollower
+    ( Follower (..)
+    , Intersector (..)
     )
 import Data.IORef
     ( modifyIORef'
     , newIORef
     , readIORef
     )
+import Ouroboros.Network.Block qualified as Network
+import Ouroboros.Network.Magic
+    ( NetworkMagic (..)
+    )
+import Ouroboros.Network.Point qualified as Network.Point
 import Test.Hspec
     ( Spec
     , describe
+    , expectationFailure
     , it
     , shouldBe
     )
@@ -73,8 +88,76 @@ spec =
                                 }
                            ]
 
+        it "starts from Origin and threads replay state through roll-forward" $ do
+            bundle <- loadDevnetBundle
+            replayEpochs <- newIORef []
+            let config =
+                    ReplayFollowerConfig
+                        { replayFollowerSocketPath = "node.socket"
+                        , replayFollowerNetworkMagic =
+                            NetworkMagic 42
+                        , replayFollowerByronEpochSlots = 21_600
+                        }
+                replayAction state _block = do
+                    modifyIORef'
+                        replayEpochs
+                        (replayStateLastEpoch state :)
+                    pure
+                        state
+                            { replayStateLastEpoch =
+                                replayStateLastEpoch state + 1
+                            }
+                fakeRunner _ _ _ _ _ Intersector{intersectFound} points = do
+                    assertOriginStart points
+                    follower0 <-
+                        intersectFound
+                            (Network.Point Network.Point.Origin)
+                    follower1 <-
+                        rollForward follower0 unusedFetched unusedTip
+                    _follower2 <-
+                        rollForward follower1 unusedFetched unusedTip
+                    pure (Right ())
+                unusedFetched =
+                    Fetched
+                        { fetchedPoint =
+                            Network.Point Network.Point.Origin
+                        , fetchedBlock =
+                            error "fetchedBlock should not be evaluated"
+                        , fetchedTip = unusedTip
+                        }
+                unusedTip =
+                    error "tip should not be evaluated"
+
+            result <-
+                runReplayFollowerWith
+                    fakeRunner
+                    replayAction
+                    bundle
+                    config
+
+            case result of
+                Left err ->
+                    expectationFailure
+                        $ "expected replay follower to finish, got "
+                            <> show err
+                Right () ->
+                    pure ()
+            recordedEpochs <- readIORef replayEpochs
+            recordedEpochs `shouldBe` [1, 0]
+
 loadDevnetBundle :: IO LedgerConfigBundle
 loadDevnetBundle =
     loadLedgerConfig
         $ ledgerConfigPathsFromDirectory
             "test/fixtures/devnet-genesis"
+
+assertOriginStart :: [Network.Point block] -> IO ()
+assertOriginStart points =
+    case points of
+        [Network.Point Network.Point.Origin] ->
+            pure ()
+        other ->
+            expectationFailure
+                $ "expected [Origin], got "
+                    <> show (length other)
+                    <> " start points"
