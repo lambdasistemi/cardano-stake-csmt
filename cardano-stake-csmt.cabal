@@ -71,10 +71,29 @@ library library
   default-language: Haskell2010
   exposed-modules:
     Cardano.StakeCSMT.Application.Health
+    Cardano.StakeCSMT.Ledger.Config
 
   build-depends:
+    , aeson
     , base <5
+    , bytestring
+    , cardano-crypto-class
+    , cardano-crypto-wrapper
+    , cardano-ledger-alonzo
+    , cardano-ledger-api
+    , cardano-ledger-byron
+    , cardano-ledger-conway
+    , cardano-ledger-core
+    , cardano-ledger-dijkstra
+    , cardano-ledger-shelley
+    , cardano-slotting
+    , filepath
+    , mtl
+    , ouroboros-consensus:cardano
+    , ouroboros-consensus:ouroboros-consensus
+    , ouroboros-consensus:unstable-cardano-tools
     , text
+    , transformers
 
 library http
   import:           warnings
@@ -125,6 +144,7 @@ test-suite unit-tests
   other-modules:
     Cardano.StakeCSMT.Application.HealthSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
+    Cardano.StakeCSMT.Ledger.ConfigSpec
 
   build-depends:
     , base                       <5
