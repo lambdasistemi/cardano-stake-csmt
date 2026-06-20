@@ -16,6 +16,6 @@
 
 ## Finalization
 
-- [ ] T009 Update `main` branch ruleset required checks to the real CI job names.
-- [ ] T010 Update the PR body with the component map and verification evidence.
-- [ ] T011 Run final `./gate.sh`, drop `gate.sh`, and mark the PR ready for review.
+- [X] T009 Update `main` branch ruleset required checks to the real CI job names.
+- [X] T010 Update the PR body with the component map and verification evidence.
+- [X] T011 Run final `./gate.sh`, drop `gate.sh`, and mark the PR ready for review.
