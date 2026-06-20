@@ -10,11 +10,11 @@
 
 ## Slice 2 - N2C Replay Follower
 
-- [ ] T406 Add N2C follower configuration and a follower entry point that starts from Origin.
-- [ ] T407 Wire `Cardano.Node.Client.N2C.ChainSync` full-block `Fetched` values through a `ChainFollower.Follower` that threads `ReplayState`.
-- [ ] T408 Add only the dependency manifest entries needed for `cardano-node-clients`, `chain-follower`, and imported consensus/network support.
-- [ ] T409 Add unit coverage using an injectable ChainSync runner or follower constructor so state threading is verified without a live node.
-- [ ] T410 Run the focused replay unit test and `./gate.sh`, then commit with subject `feat: wire replay through n2c chainsync` and trailer `Tasks: T406, T407, T408, T409, T410`.
+- [x] T406 Add N2C follower configuration and a follower entry point that starts from Origin.
+- [x] T407 Wire `Cardano.Node.Client.N2C.ChainSync` full-block `Fetched` values through a `ChainFollower.Follower` that threads `ReplayState`.
+- [x] T408 Add only the dependency manifest entries needed for `cardano-node-clients`, `chain-follower`, and imported consensus/network support.
+- [x] T409 Add unit coverage using an injectable ChainSync runner or follower constructor so state threading is verified without a live node.
+- [x] T410 Run the focused replay unit test and `./gate.sh`, then commit with subject `feat: wire replay through n2c chainsync` and trailer `Tasks: T406, T407, T408, T409, T410`.
 
 ## Slice 3 - Devnet Replay Proof
 
