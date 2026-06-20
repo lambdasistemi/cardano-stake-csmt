@@ -9,10 +9,10 @@
 
 ## Slice 2 - Docs, Speckit, and CI
 
-- [ ] T005 Add MkDocs skeleton and documentation workflow.
-- [ ] T006 Initialize Spec Kit under `.specify/`, remove per-project agent command copies, and fill the constitution.
-- [ ] T007 Replace the stub CI with real NixOS jobs named `Build Gate`, `CI build`, `CI format`, `CI hlint`, and `Docs build`.
-- [ ] T008 Run `./gate.sh` and commit with subject `ci: add docs speckit and real CI`.
+- [X] T005 Add MkDocs skeleton and documentation workflow.
+- [X] T006 Initialize Spec Kit under `.specify/`, remove per-project agent command copies, and fill the constitution.
+- [X] T007 Replace the stub CI with real NixOS jobs named `Build Gate`, `CI build`, `CI format`, `CI hlint`, and `Docs build`.
+- [X] T008 Run `./gate.sh` and commit with subject `ci: add docs speckit and real CI`.
 
 ## Finalization
 
