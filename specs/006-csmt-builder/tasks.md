@@ -2,10 +2,10 @@
 
 ## Slice 1 - Dependency And Schema Foundation
 
-- [ ] T006-S1 Add `mts` / `mts:csmt` dependency wiring and expose CSMT schema modules.
-- [ ] T007-S1 Implement stable codecs for credentials, coins, epoch prefixes, CSMT nodes, and epoch root records.
-- [ ] T008-S1 Add focused unit tests for codec determinism and round trips.
-- [ ] T009-S1 Run `./gate.sh`, commit as `feat(csmt): add stake csmt schema foundation`, and stop for orchestration review.
+- [X] T006-S1 Add `mts` / `mts:csmt` dependency wiring and expose CSMT schema modules.
+- [X] T007-S1 Implement stable codecs for credentials, coins, epoch prefixes, CSMT nodes, and epoch root records.
+- [X] T008-S1 Add focused unit tests for codec determinism and round trips.
+- [X] T009-S1 Run `./gate.sh`, commit as `feat(csmt): add stake csmt schema foundation`, and stop for orchestration review.
 
 ## Slice 2 - Epoch Builder And Proofs
 

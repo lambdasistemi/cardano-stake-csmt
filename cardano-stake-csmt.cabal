@@ -71,6 +71,8 @@ library library
   default-language: Haskell2010
   exposed-modules:
     Cardano.StakeCSMT.Application.Health
+    Cardano.StakeCSMT.CSMT.Codecs
+    Cardano.StakeCSMT.CSMT.Columns
     Cardano.StakeCSMT.Ledger.Config
     Cardano.StakeCSMT.Ledger.Replay
     Cardano.StakeCSMT.Ledger.StakeSnapshot
@@ -83,6 +85,7 @@ library library
     , cardano-crypto-wrapper
     , cardano-ledger-alonzo
     , cardano-ledger-api
+    , cardano-ledger-binary
     , cardano-ledger-byron
     , cardano-ledger-conway
     , cardano-ledger-core
@@ -90,15 +93,19 @@ library library
     , cardano-ledger-shelley
     , cardano-slotting
     , cardano-node-clients
+    , cborg
     , chain-follower
     , contra-tracer
     , containers
     , filepath
+    , lens
     , mtl
+    , mts:csmt
     , ouroboros-consensus:cardano
     , ouroboros-consensus:ouroboros-consensus
     , ouroboros-consensus:unstable-cardano-tools
     , ouroboros-network:api
+    , rocksdb-kv-transactions:kv-transactions
     , text
     , transformers
     , vector-map
@@ -151,6 +158,7 @@ test-suite unit-tests
   default-language: Haskell2010
   other-modules:
     Cardano.StakeCSMT.Application.HealthSpec
+    Cardano.StakeCSMT.CSMT.CodecsSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
     Cardano.StakeCSMT.Ledger.ReplaySpec
@@ -158,6 +166,9 @@ test-suite unit-tests
 
   build-depends:
     , base                       <5
+    , bytestring
+    , cardano-crypto-class
+    , cardano-slotting
     , cardano-stake-csmt:http
     , cardano-stake-csmt:library
     , cardano-ledger-core
@@ -166,6 +177,7 @@ test-suite unit-tests
     , containers
     , hspec
     , http-types
+    , lens
     , ouroboros-network:api
 
 test-suite e2e-tests
