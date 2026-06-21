@@ -10,10 +10,10 @@
 
 ## Slice 2 - History Builder And Proofs
 
-- [ ] T006-S2 Add `Cardano.StakeCSMT.History.Builder` with `finalizeEpochRoot`, `queryHistoryRoot`, `queryHistoryLeaf`, `buildEpochRootProof`, and `verifyEpochRootProof`.
-- [ ] T007-S2 Add in-memory builder tests for deterministic history roots, proof success, and failure on wrong epoch, stake root, total stake, and history root.
-- [ ] T008-S2 Keep history code isolated from rollback and HTTP scope.
-- [ ] T009-S2 Run `./gate.sh` and commit as `feat(history): build epoch root accumulator`.
+- [X] T006-S2 Add `Cardano.StakeCSMT.History.Builder` with `finalizeEpochRoot`, `queryHistoryRoot`, `queryHistoryLeaf`, `buildEpochRootProof`, and `verifyEpochRootProof`.
+- [X] T007-S2 Add in-memory builder tests for deterministic history roots, proof success, and failure on wrong epoch, stake root, total stake, and history root.
+- [X] T008-S2 Keep history code isolated from rollback and HTTP scope.
+- [X] T009-S2 Run `./gate.sh` and commit as `feat(history): build epoch root accumulator`.
 
 ## Slice 3 - History RocksDB Persistence
 
