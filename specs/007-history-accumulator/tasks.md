@@ -17,10 +17,10 @@
 
 ## Slice 3 - History RocksDB Persistence
 
-- [ ] T010-S3 Add `Cardano.StakeCSMT.History.RocksDB` with history-specific RocksDB column families and typed database adapter.
-- [ ] T011-S3 Add a RocksDB test proving leaves, tree nodes, current root, and epoch-root proofs persist across reopen.
-- [ ] T012-S3 Register the RocksDB module/test in cabal and `test/main.hs` if not already covered.
-- [ ] T013-S3 Run `./gate.sh` and commit as `feat(history): persist history accumulator`.
+- [X] T010-S3 Add `Cardano.StakeCSMT.History.RocksDB` with history-specific RocksDB column families and typed database adapter.
+- [X] T011-S3 Add a RocksDB test proving leaves, tree nodes, current root, and epoch-root proofs persist across reopen.
+- [X] T012-S3 Register the RocksDB module/test in cabal and `test/main.hs` if not already covered.
+- [X] T013-S3 Run `./gate.sh` and commit as `feat(history): persist history accumulator`.
 
 ## Finalization
 
