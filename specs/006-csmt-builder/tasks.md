@@ -22,6 +22,6 @@
 
 ## Slice 4 - Finalization
 
-- [ ] T017-S4 Update PR body with final schema contract and verification evidence.
-- [ ] T018-S4 Run `nix develop -c just ci`.
-- [ ] T019-S4 Drop `gate.sh`, commit `chore: drop gate.sh (ready for review)`, push, and mark PR ready.
+- [x] T017-S4 Update PR body with final schema contract and verification evidence.
+- [x] T018-S4 Run `nix develop -c just ci`.
+- [x] T019-S4 Drop `gate.sh`, commit `chore: drop gate.sh (ready for review)`, push, and mark PR ready.
