@@ -74,6 +74,7 @@ library library
     Cardano.StakeCSMT.CSMT.Builder
     Cardano.StakeCSMT.CSMT.Codecs
     Cardano.StakeCSMT.CSMT.Columns
+    Cardano.StakeCSMT.CSMT.RocksDB
     Cardano.StakeCSMT.Ledger.Config
     Cardano.StakeCSMT.Ledger.Replay
     Cardano.StakeCSMT.Ledger.StakeSnapshot
@@ -106,6 +107,8 @@ library library
     , ouroboros-consensus:ouroboros-consensus
     , ouroboros-consensus:unstable-cardano-tools
     , ouroboros-network:api
+    , rocksdb-haskell-jprupp
+    , rocksdb-kv-transactions
     , rocksdb-kv-transactions:kv-transactions
     , text
     , transformers
@@ -161,6 +164,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.Application.HealthSpec
     Cardano.StakeCSMT.CSMT.BuilderSpec
     Cardano.StakeCSMT.CSMT.CodecsSpec
+    Cardano.StakeCSMT.CSMT.RocksDBSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
     Cardano.StakeCSMT.Ledger.ReplaySpec
@@ -182,6 +186,7 @@ test-suite unit-tests
     , lens
     , ouroboros-network:api
     , rocksdb-kv-transactions:kv-transactions
+    , temporary
 
 test-suite e2e-tests
   import:           warnings
