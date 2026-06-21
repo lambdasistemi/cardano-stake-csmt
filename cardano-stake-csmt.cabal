@@ -71,6 +71,7 @@ library library
   default-language: Haskell2010
   exposed-modules:
     Cardano.StakeCSMT.Application.Health
+    Cardano.StakeCSMT.CSMT.Builder
     Cardano.StakeCSMT.CSMT.Codecs
     Cardano.StakeCSMT.CSMT.Columns
     Cardano.StakeCSMT.Ledger.Config
@@ -158,6 +159,7 @@ test-suite unit-tests
   default-language: Haskell2010
   other-modules:
     Cardano.StakeCSMT.Application.HealthSpec
+    Cardano.StakeCSMT.CSMT.BuilderSpec
     Cardano.StakeCSMT.CSMT.CodecsSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
@@ -179,6 +181,7 @@ test-suite unit-tests
     , http-types
     , lens
     , ouroboros-network:api
+    , rocksdb-kv-transactions:kv-transactions
 
 test-suite e2e-tests
   import:           warnings

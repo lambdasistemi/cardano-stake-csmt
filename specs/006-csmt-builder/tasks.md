@@ -9,10 +9,10 @@
 
 ## Slice 2 - Epoch Builder And Proofs
 
-- [ ] T010-S2 Implement the epoch CSMT builder over `StakeSnapshot`.
-- [ ] T011-S2 Implement root lookup and credential inclusion proof functions.
-- [ ] T012-S2 Add golden/determinism and proof verification tests over synthetic non-empty snapshots.
-- [ ] T013-S2 Run `./gate.sh`, commit as `feat(csmt): build epoch stake roots and proofs`, and stop for orchestration review.
+- [x] T010-S2 Implement the epoch CSMT builder over `StakeSnapshot`.
+- [x] T011-S2 Implement root lookup and credential inclusion proof functions.
+- [x] T012-S2 Add golden/determinism and proof verification tests over synthetic non-empty snapshots.
+- [x] T013-S2 Run `./gate.sh`, commit as `feat(csmt): build epoch stake roots and proofs`, and stop for orchestration review.
 
 ## Slice 3 - RocksDB Persistence
 
