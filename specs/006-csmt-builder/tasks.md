@@ -16,9 +16,9 @@
 
 ## Slice 3 - RocksDB Persistence
 
-- [ ] T014-S3 Implement RocksDB-backed helpers or test harness for the CSMT columns.
-- [ ] T015-S3 Add close/reopen tests proving snapshot, tree, and root persistence.
-- [ ] T016-S3 Run `./gate.sh`, commit as `feat(csmt): persist epoch stake trees in rocksdb`, and stop for orchestration review.
+- [x] T014-S3 Implement RocksDB-backed helpers or test harness for the CSMT columns.
+- [x] T015-S3 Add close/reopen tests proving snapshot, tree, and root persistence.
+- [x] T016-S3 Run `./gate.sh`, commit as `feat(csmt): persist epoch stake trees in rocksdb`, and stop for orchestration review.
 
 ## Slice 4 - Finalization
 
