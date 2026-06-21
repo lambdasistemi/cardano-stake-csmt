@@ -2,11 +2,11 @@
 
 ## Slice 1 - History Codecs And Columns
 
-- [ ] T001-S1 Add `Cardano.StakeCSMT.History.Codecs` with a stable history prefix, unit key codec, and epoch-root-to-hash helper covering `EpochRoot` including `totalStake`.
-- [ ] T002-S1 Add `Cardano.StakeCSMT.History.Columns` with leaf, tree, and current-root columns plus codecs.
-- [ ] T003-S1 Register new history modules and tests in `cardano-stake-csmt.cabal` and `test/main.hs`.
-- [ ] T004-S1 Add focused codec/column tests proving deterministic prefixing and total-stake-sensitive leaf hashing.
-- [ ] T005-S1 Run `./gate.sh` and commit as `feat(history): add history storage codecs`.
+- [X] T001-S1 Add `Cardano.StakeCSMT.History.Codecs` with a stable history prefix, unit key codec, and epoch-root-to-hash helper covering `EpochRoot` including `totalStake`.
+- [X] T002-S1 Add `Cardano.StakeCSMT.History.Columns` with leaf, tree, and current-root columns plus codecs.
+- [X] T003-S1 Register new history modules and tests in `cardano-stake-csmt.cabal` and `test/main.hs`.
+- [X] T004-S1 Add focused codec/column tests proving deterministic prefixing and total-stake-sensitive leaf hashing.
+- [X] T005-S1 Run `./gate.sh` and commit as `feat(history): add history storage codecs`.
 
 ## Slice 2 - History Builder And Proofs
 
