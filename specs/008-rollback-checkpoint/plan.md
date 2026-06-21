@@ -6,17 +6,18 @@
 - Existing replay surface: `Cardano.StakeCSMT.Ledger.Replay` threads `ReplayState` with `ExtLedgerState StakeBlock ValuesMK` and applies blocks via `tickThenReapply` plus `applyDiffs`.
 - Existing follower behavior: origin rollback currently progresses; non-origin rollback currently resets the intersector.
 - Existing persistence style: small library modules with explicit export lists, focused hspec tests, and RocksDB helpers isolated from core logic.
-- Consensus codec discovery: `Ouroboros.Consensus.Ledger.Extended` exposes `encodeExtLedgerState`/`decodeExtLedgerState`; `Ouroboros.Consensus.Storage.Serialisation` exposes disk helpers. The implementation must prove the selected codec in a RED/GREEN checkpoint round-trip test before depending on it.
+- Consensus codec discovery: `Ouroboros.Consensus.Ledger.Extended` exposes `encodeExtLedgerState`/`decodeExtLedgerState`; `Ouroboros.Consensus.Storage.Serialisation` exposes disk helpers. Slice 1 attempted the consensus snapshot envelope with the full `CardanoCodecConfig` and the UTxO-HD separate-tables shape; both focused attempts failed at the HFC ledger-state decode boundary.
+- Pivot decision (A-002): do not hand-roll ledger-state serialization and do not keep grinding the full-state codec. Treat the checkpoint as the most recent finalized epoch boundary and re-derive volatile in-memory ledger state by replaying retained blocks forward from that immutable boundary.
 
 ## Architecture
 
 Add `Cardano.StakeCSMT.Ledger.Checkpoint` as the only new rollback module. It owns:
 
-- checkpoint metadata for origin/at-block points and last observed epoch;
-- `ReplayState` checkpoint encode/decode helpers;
+- finalized-boundary checkpoint metadata for origin/at-block points and last observed/finalized epochs;
+- file-backed persistence for finalized-boundary checkpoints and replay-tail blocks, not full `ExtLedgerState` blobs;
 - a small file-backed checkpoint store;
 - an in-memory replay tail of recent `Fetched` blocks;
-- lookup/rewind helpers that restore a checkpoint and replay retained blocks with the caller's `replayBlock` action.
+- lookup/rewind helpers that choose the nearest finalized boundary at or before the rollback point and replay retained blocks with the caller's `replayBlock` action.
 
 `Ledger.Replay` remains the integration point. The existing `runReplayFollowerWith` stays available for tests and simple callers. A new checkpoint-aware runner or configuration extends follower construction so non-origin rollback can return `Progress` when the rollback point is reachable from the checkpoint/tail store, and `Reset` when it is not.
 
@@ -29,12 +30,12 @@ The replay tail is volatile. It exists only to repair the current in-memory ledg
 Create the checkpoint module and focused unit tests:
 
 - checkpoint point metadata and ordering;
-- checkpoint encode/decode round-trip for `ReplayState`;
+- finalized-boundary checkpoint encode/decode round-trip;
 - file-backed save/load/list/nearest-checkpoint helpers;
 - bounded replay-tail insertion/truncation helpers;
 - cabal module/test registration and any required library dependencies.
 
-This slice proves the consensus codec works before replay integration depends on it.
+This slice makes the A-002 pivot explicit: rollback recovery is proved by finalized-boundary selection plus replay-tail retention, while full `ExtLedgerState` serialization is not used.
 
 ### Slice 2: Replay Rollback Integration
 
@@ -46,15 +47,15 @@ Wire the checkpoint API into `Ledger.Replay`:
 - fall back to `Reset intersector` when the rollback target is outside checkpoint/tail retention;
 - preserve the current origin rollback behavior.
 
-Unit tests use a fake chain-sync runner and synthetic `Fetched` blocks/actions to prove reachable rollback, unreachable rollback, and post-rollback continuation.
+Unit tests use a fake chain-sync runner and synthetic `Fetched` blocks/actions to prove reachable rollback from the finalized boundary, unreachable rollback, and post-rollback continuation.
 
 ### Slice 3: E2E Recovery Proof
 
 Extend the devnet replay e2e coverage:
 
 - replay a devnet chain to collect a direct state/root baseline;
-- simulate a near-tip rollback through the checkpoint/tail API;
-- reapply the retained tail and compare the recovered state/root with a direct replay to the same point;
+- simulate a near-tip rollback through the finalized-boundary checkpoint/tail API;
+- reapply from the finalized boundary through the retained tail and compare the recovered state/root with a direct replay to the same point;
 - create a finalized history root before the volatile rollback and assert it is unchanged after recovery.
 
 This test may reuse existing CSMT/history builders as consumers, but must not change their modules or schemas.
