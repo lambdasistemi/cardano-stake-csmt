@@ -20,8 +20,5 @@ main =
         describe "cardano-stake-csmt executable scaffold"
             $ it "uses the default HTTP port"
             $ configPort defaultConfig
-            `shouldBe` configPort expectedConfig
+            `shouldBe` 8080
         ReplaySpec.spec
-  where
-    expectedConfig :: RuntimeConfig
-    expectedConfig = RuntimeConfig{configPort = 8080}
