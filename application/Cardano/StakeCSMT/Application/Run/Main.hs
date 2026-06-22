@@ -19,10 +19,12 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.DSIGN.Ed25519
     ( Ed25519DSIGN
     )
+import Cardano.StakeCSMT.Application.Run.CLI
+    ( runtimeConfigFromCommandLine
+    )
 import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
     , configApiPort
-    , runtimeConfigFromEnvironment
     )
 import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
 import Cardano.StakeCSMT.CSMT.RocksDB
@@ -39,7 +41,6 @@ import Cardano.StakeCSMT.HTTP.Server
     , docsApp
     , runAPIServer
     , runDocsServer
-    , unavailableHandlers
     )
 import Cardano.StakeCSMT.History.Columns qualified as History
 import Cardano.StakeCSMT.History.RocksDB
@@ -73,7 +74,7 @@ data RuntimeApplications = RuntimeApplications
 
 main :: IO ()
 main =
-    runtimeConfigFromEnvironment >>= run
+    runtimeConfigFromCommandLine >>= run
 
 run :: RuntimeConfig -> IO ()
 run config =
@@ -109,17 +110,13 @@ withRuntimeHandlers
         , configSigningKey
         }
     action =
-        case (configStakeDbPath, configHistoryDbPath) of
-            (Just stakeDbPath, Just historyDbPath) ->
-                withStakeCSMTRocksDB stakeDbPath $ \stakeRocksDB ->
-                    withHistoryRocksDB historyDbPath $ \historyRocksDB ->
-                        action
-                            $ runtimeHandlers
-                                (mkStakeCSMTDatabase stakeRocksDB)
-                                (mkHistoryDatabase historyRocksDB)
-                                configSigningKey
-            _ ->
-                action unavailableHandlers
+        withStakeCSMTRocksDB configStakeDbPath $ \stakeRocksDB ->
+            withHistoryRocksDB configHistoryDbPath $ \historyRocksDB ->
+                action
+                    $ runtimeHandlers
+                        (mkStakeCSMTDatabase stakeRocksDB)
+                        (mkHistoryDatabase historyRocksDB)
+                        configSigningKey
 
 runtimeHandlers
     :: Database IO ColumnFamily Stake.Columns BatchOp
