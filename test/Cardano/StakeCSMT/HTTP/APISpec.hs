@@ -25,7 +25,8 @@ import Cardano.StakeCSMT.CSMT.Codecs
     ( csmtHashCodec
     )
 import Cardano.StakeCSMT.HTTP.API
-    ( ReadyResponse (..)
+    ( LatestHeaderResponse (..)
+    , ReadyResponse (..)
     , StakeProofResponse (..)
     , StakeRootResponse (..)
     , parseCredentialBase16
@@ -101,6 +102,35 @@ spec = do
 
             jsonKeys (toJSON root)
                 `shouldBe` ["epoch", "stakeRoot", "totalStake"]
+
+        it "renders signed latest-header fields with stable wire names" $ do
+            let header =
+                    LatestHeaderResponse
+                        { epoch = EpochNo 42
+                        , stakeRoot = renderHashBase16 testHash
+                        , totalStake = Coin 2_000_000
+                        , signature = "cafe"
+                        , publicKey = "beef"
+                        }
+
+            jsonKeys (toJSON header)
+                `shouldBe` [ "epoch"
+                           , "publicKey"
+                           , "signature"
+                           , "stakeRoot"
+                           , "totalStake"
+                           ]
+
+            encode header
+                `shouldBe` encode
+                    ( object
+                        [ "epoch" .= (42 :: Word)
+                        , "stakeRoot" .= renderHashBase16 testHash
+                        , "totalStake" .= (2_000_000 :: Integer)
+                        , "signature" .= ("cafe" :: Text)
+                        , "publicKey" .= ("beef" :: Text)
+                        ]
+                    )
 
         it "rejects invalid credential base16/CBOR"
             $ parseCredentialBase16 "00"

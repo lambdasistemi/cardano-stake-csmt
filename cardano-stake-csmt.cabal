@@ -130,6 +130,7 @@ library http
     Cardano.StakeCSMT.HTTP.Base16
     Cardano.StakeCSMT.HTTP.Query
     Cardano.StakeCSMT.HTTP.Server
+    Cardano.StakeCSMT.HTTP.Signing
     Cardano.StakeCSMT.HTTP.Swagger
 
   build-depends:
@@ -138,6 +139,7 @@ library http
     , base                       <5
     , base16-bytestring
     , bytestring
+    , cardano-crypto-class
     , cardano-ledger-core
     , cardano-slotting
     , cardano-stake-csmt:library
@@ -166,6 +168,7 @@ library application
 
   build-depends:
     , base                    <5
+    , cardano-crypto-class
     , cardano-stake-csmt:http
     , cardano-stake-csmt:library
     , rocksdb-haskell-jprupp
@@ -200,6 +203,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
+    Cardano.StakeCSMT.HTTP.SigningSpec
     Cardano.StakeCSMT.HTTP.SwaggerSpec
     Cardano.StakeCSMT.Ledger.CheckpointSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec

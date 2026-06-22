@@ -5,8 +5,18 @@ module Cardano.StakeCSMT.HTTP.QuerySpec
 import CSMT.Hashes
     ( verifyInclusionProof
     )
+import Cardano.Crypto.DSIGN.Class
+    ( SignKeyDSIGN
+    , genKeyDSIGN
+    )
+import Cardano.Crypto.DSIGN.Ed25519
+    ( Ed25519DSIGN
+    )
 import Cardano.Crypto.Hash.Class
     ( hashFromBytes
+    )
+import Cardano.Crypto.Seed
+    ( mkSeedFromBytes
     )
 import Cardano.Ledger.Coin
     ( Coin (..)
@@ -32,6 +42,7 @@ import Cardano.StakeCSMT.CSMT.Codecs
 import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
 import Cardano.StakeCSMT.HTTP.API
     ( HistoryRootResponse (..)
+    , LatestHeaderResponse (..)
     , StakeProofResponse (..)
     , StakeRootResponse (..)
     , renderCredentialBase16
@@ -45,6 +56,10 @@ import Cardano.StakeCSMT.HTTP.Query
     , queryEpochRoots
     , queryHistoricalProof
     , queryLatestProof
+    , querySignedLatestHeader
+    )
+import Cardano.StakeCSMT.HTTP.Signing
+    ( verifyLatestHeader
     )
 import Cardano.StakeCSMT.History.Builder
     ( finalizeEpochRoot
@@ -139,6 +154,25 @@ spec =
             fmap (\StakeRootResponse{epoch} -> epoch) roots
                 `shouldBe` [EpochNo 41, epoch42, EpochNo 43]
 
+        it "signs the newest epoch root for latest header queries" $ do
+            db <- freshStakeDb
+            runTransactionUnguarded db $ do
+                void $ buildEpochCSMT (EpochNo 41) snapshot41
+                void $ buildEpochCSMT (EpochNo 43) snapshot43
+                void $ buildEpochCSMT epoch42 snapshot42
+
+            mHeader <-
+                runTransactionUnguarded db
+                    $ querySignedLatestHeader signingKey
+
+            case mHeader of
+                Nothing ->
+                    fail "expected a signed latest header"
+                Just header@LatestHeaderResponse{epoch, totalStake} -> do
+                    epoch `shouldBe` EpochNo 43
+                    totalStake `shouldBe` Coin 200
+                    verifyLatestHeader header `shouldBe` True
+
         it "returns the current history root" $ do
             db <- freshHistoryDb
             historyRoot <-
@@ -227,6 +261,10 @@ credentialB = testCredential 8
 
 credentialC :: Credential Staking
 credentialC = testCredential 9
+
+signingKey :: SignKeyDSIGN Ed25519DSIGN
+signingKey =
+    genKeyDSIGN @Ed25519DSIGN $ mkSeedFromBytes $ BS.replicate 32 11
 
 testCredential :: Word -> Credential Staking
 testCredential byte =
