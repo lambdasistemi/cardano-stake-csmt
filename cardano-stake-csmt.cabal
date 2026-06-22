@@ -80,6 +80,7 @@ library library
     Cardano.StakeCSMT.History.Columns
     Cardano.StakeCSMT.History.RocksDB
     Cardano.StakeCSMT.Ledger.Config
+    Cardano.StakeCSMT.Ledger.Checkpoint
     Cardano.StakeCSMT.Ledger.Replay
     Cardano.StakeCSMT.Ledger.StakeSnapshot
 
@@ -103,6 +104,7 @@ library library
     , chain-follower
     , contra-tracer
     , containers
+    , directory
     , filepath
     , lens
     , mtl
@@ -173,6 +175,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
+    Cardano.StakeCSMT.Ledger.CheckpointSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
     Cardano.StakeCSMT.Ledger.ReplaySpec
     Cardano.StakeCSMT.Ledger.StakeSnapshotSpec
