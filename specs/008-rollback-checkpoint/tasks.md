@@ -25,9 +25,9 @@
 
 ## Slice 3a - E2E Replay Recovery Proof
 
-- [ ] T015-S3A Extend e2e replay coverage with a devnet finalized-boundary checkpoint/rollback/replay-tail recovery proof.
-- [ ] T016-S3A Verify ledger state re-derived from the finalized boundary and recovered replay observation matches direct replay to the same point.
-- [ ] T017-S3A Run `./gate.sh` and commit as `test(e2e): prove checkpoint rollback recovery`.
+- [X] T015-S3A Extend e2e replay coverage with a devnet finalized-boundary checkpoint/rollback/replay-tail recovery proof.
+- [X] T016-S3A Verify ledger state re-derived from the finalized boundary and recovered replay observation matches direct replay to the same point.
+- [X] T017-S3A Run `./gate.sh` and commit as `test(e2e): prove checkpoint rollback recovery`.
 
 ## Slice 3b - E2E History Invariance Proof
 
