@@ -75,6 +75,7 @@ import Cardano.StakeCSMT.Ledger.Replay
     )
 import Cardano.StakeCSMT.Ledger.StakeSnapshot
     ( StakeSnapshot (..)
+    , stakeSnapshotFromLedgerState
     )
 import ChainFollower
     ( Follower (..)
@@ -85,6 +86,9 @@ import Control.Monad
     ( foldM
     )
 import Data.ByteString qualified as BS
+import Data.Foldable
+    ( fold
+    )
 import Data.IORef
     ( modifyIORef'
     , newIORef
@@ -309,6 +313,70 @@ spec =
                         verifyFinalizedHistoryObservation afterRecoveryHistory
                             `shouldBe` True
 
+        describe "populated"
+            $ it "observes an epoch-boundary mark snapshot"
+            $ withCardanoNode genesisDir
+            $ \socketPath _startMs -> do
+                let nodeRuntimeDir = takeDirectory socketPath
+                    config =
+                        ReplayFollowerConfig
+                            { replayFollowerSocketPath = socketPath
+                            , replayFollowerNetworkMagic = NetworkMagic 42
+                            , replayFollowerByronEpochSlots = 21_600
+                            }
+                bundle <-
+                    loadLedgerConfig
+                        $ ledgerConfigPathsFromDirectory nodeRuntimeDir
+                snapshotRef <- newIORef Nothing
+                let replayAction state block = do
+                        captured <- readIORef snapshotRef
+                        case captured of
+                            Just _ ->
+                                pure state
+                            Nothing -> do
+                                nextState <-
+                                    replayBlock
+                                        bundle
+                                        (const $ pure ())
+                                        state
+                                        block
+                                case stakeSnapshotFromLedgerState
+                                    $ replayStateLedgerState nextState of
+                                    Right snapshot
+                                        | replayStateLastEpoch nextState
+                                            > 0 ->
+                                            writeIORef snapshotRef
+                                                $ Just snapshot
+                                    _ ->
+                                        pure ()
+                                pure nextState
+
+                result <-
+                    timeout 75_000_000
+                        $ runReplayFollowerWith
+                            defaultReplayChainSyncRunner
+                            replayAction
+                            bundle
+                            config
+
+                case result of
+                    Just (Left err) ->
+                        expectationFailure
+                            $ "expected replay follower not to fail, got "
+                                <> show err
+                    _ ->
+                        pure ()
+                snapshot <-
+                    expectJust
+                        "expected a ledger snapshot after an epoch boundary"
+                        =<< readIORef snapshotRef
+                let observedStake = stakeSnapshotStake snapshot
+                observedStake `shouldSatisfy` (not . Map.null)
+                Map.lookup e2eGenesisStakingCredential observedStake
+                    `shouldBe` Just e2eGenesisStake
+                stakeSnapshotTotalStake snapshot
+                    `shouldBe` fold (Map.elems observedStake)
+
 captureDevnetFetchedBlocks
     :: LedgerConfigBundle
     -> ReplayFollowerConfig
@@ -506,6 +574,48 @@ testCredential byte =
     case hashFromBytes $ BS.replicate 28 $ fromIntegral byte of
         Nothing -> error "invalid deterministic key hash bytes"
         Just keyHash -> KeyHashObj $ KeyHash keyHash
+
+e2eGenesisStakingCredential :: Credential Staking
+e2eGenesisStakingCredential =
+    case hashFromBytes e2eGenesisStakingCredentialBytes of
+        Nothing -> error "invalid e2e genesis staking key hash bytes"
+        Just keyHash -> KeyHashObj $ KeyHash keyHash
+
+e2eGenesisStake :: Coin
+e2eGenesisStake = Coin 30_000_000_000_000_000
+
+e2eGenesisStakingCredentialBytes :: BS.ByteString
+e2eGenesisStakingCredentialBytes =
+    BS.pack
+        [ 0x74
+        , 0x1f
+        , 0x46
+        , 0x46
+        , 0x5d
+        , 0xa7
+        , 0xe1
+        , 0x7b
+        , 0xe7
+        , 0x94
+        , 0xfd
+        , 0xd6
+        , 0x37
+        , 0xa2
+        , 0x7c
+        , 0x0f
+        , 0xc3
+        , 0x81
+        , 0x6f
+        , 0x74
+        , 0x81
+        , 0x1d
+        , 0x06
+        , 0x01
+        , 0x54
+        , 0x3e
+        , 0xdc
+        , 0xfa
+        ]
 
 rollbackRunner
     :: [Fetched]
