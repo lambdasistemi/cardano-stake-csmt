@@ -10,9 +10,9 @@
 
 ## Slice 2a - Checkpoint Tail Continuity Hardening
 
-- [ ] T006-S2A Add a focused checkpoint regression for the boundary-before-oldest retained-tail case.
-- [ ] T007-S2A Harden `recoverReplayTail` so it rejects gapped retained tails when the selected boundary is not covered.
-- [ ] T008-S2A Run `./gate.sh` and commit as `fix(ledger): reject gapped replay tails`.
+- [x] T006-S2A Add a focused checkpoint regression for the boundary-before-oldest retained-tail case.
+- [x] T007-S2A Harden `recoverReplayTail` so it rejects gapped retained tails when the selected boundary is not covered.
+- [x] T008-S2A Run `./gate.sh` and commit as `fix(ledger): reject gapped replay tails`.
 
 ## Slice 2b - Replay Rollback Integration
 
