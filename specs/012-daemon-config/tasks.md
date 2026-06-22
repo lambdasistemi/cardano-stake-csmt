@@ -11,7 +11,7 @@
 
 ## Finalization
 
-- [ ] T007-F Run `just ci` at HEAD.
-- [ ] T008-F Run `nix build .#default` at HEAD.
-- [ ] T009-F Update PR body with delivered behavior and verification evidence.
-- [ ] T010-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
+- [X] T007-F Run `just ci` at HEAD.
+- [X] T008-F Run `nix build .#default` at HEAD.
+- [X] T009-F Update PR body with delivered behavior and verification evidence.
+- [X] T010-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
