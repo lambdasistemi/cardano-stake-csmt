@@ -69,16 +69,29 @@ origin rollback preservation, and post-rollback continuation. This slice starts
 only after Slice 2a proves checkpoint tail coverage cannot silently accept a
 gap.
 
-### Slice 3: E2E Recovery Proof
+### Slice 3a: E2E Replay Recovery Proof
 
 Extend the devnet replay e2e coverage:
 
 - replay a devnet chain to collect a direct state/root baseline;
 - simulate a near-tip rollback through the finalized-boundary checkpoint/tail API;
-- reapply from the finalized boundary through the retained tail and compare the recovered state/root with a direct replay to the same point;
-- create a finalized history root before the volatile rollback and assert it is unchanged after recovery.
+- reapply from the finalized boundary through the retained tail and compare the recovered state/root with a direct replay to the same point.
 
-This test may reuse existing CSMT/history builders as consumers, but must not change their modules or schemas.
+This slice is intentionally limited to the replay/checkpoint e2e surface. It
+was split from the original Slice 3 after the driver crossed from the replay
+RED target into the separate CSMT/history proof surface without producing an
+artifact, matching the same broad-slice failure pattern found in Slice 2.
+
+### Slice 3b: E2E History Invariance Proof
+
+Extend the e2e recovery proof to cover finalized history invariance:
+
+- create a finalized history root before the volatile rollback;
+- recover through the finalized-boundary checkpoint/tail path;
+- assert the previously finalized history root/leaf remains unchanged after recovery.
+
+This slice may reuse existing CSMT/history builders as consumers, but must not
+change their modules or schemas.
 
 ## Verification
 
