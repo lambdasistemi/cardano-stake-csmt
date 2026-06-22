@@ -2,10 +2,10 @@
 
 ## Slice 1 - Populated Devnet Epoch Snapshot
 
-- [ ] T001 Add a focused e2e example that runs the existing devnet past an epoch boundary and records the ledger-derived mark snapshot.
-- [ ] T002 Ensure the devnet fixture delegates stake into a populated `ssStakeMark`, using only `e2e-test/genesis/*` fixture edits if needed.
-- [ ] T003 Assert the observed credential stake map is non-empty and matches the known genesis delegation oracle, with no LSQ.
-- [ ] T004 Assert `stakeSnapshotTotalStake` equals the sum of the populated credential stake map, run the focused e2e command and `./gate.sh`, then commit as `test(e2e): assert populated devnet stake snapshot`.
+- [X] T001 Add a focused e2e example that runs the existing devnet past an epoch boundary and records the ledger-derived mark snapshot.
+- [X] T002 Ensure the devnet fixture delegates stake into a populated `ssStakeMark`, using only `e2e-test/genesis/*` fixture edits if needed.
+- [X] T003 Assert the observed credential stake map is non-empty and matches the known genesis delegation oracle, with no LSQ.
+- [X] T004 Assert `stakeSnapshotTotalStake` equals the sum of the populated credential stake map, run the focused e2e command and `./gate.sh`, then commit as `test(e2e): assert populated devnet stake snapshot`.
 
 ## Slice 2 - Roots And Proof Golden From Real Snapshot
 
