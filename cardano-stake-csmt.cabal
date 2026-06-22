@@ -209,9 +209,14 @@ test-suite e2e-tests
 
   build-depends:
     , base                           <5
+    , cardano-node-clients
     , cardano-stake-csmt:application
     , cardano-stake-csmt:library
     , cardano-node-clients:devnet
+    , chain-follower
+    , containers
     , filepath
     , hspec
+    , ouroboros-consensus:ouroboros-consensus
     , ouroboros-network:api
+    , temporary
