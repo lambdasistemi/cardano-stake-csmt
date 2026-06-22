@@ -16,7 +16,7 @@
 
 ## Finalization
 
-- [ ] T009 Run `nix develop -c just ci` at HEAD.
-- [ ] T010 Run `nix build .#default .#e2e-tests` at HEAD.
-- [ ] T011 Update the draft PR body with delivered behavior and verification evidence.
-- [ ] T012 Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
+- [X] T009 Run `nix develop -c just ci` at HEAD.
+- [X] T010 Run `nix build .#default .#e2e-tests` at HEAD.
+- [X] T011 Update the draft PR body with delivered behavior and verification evidence.
+- [X] T012 Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
