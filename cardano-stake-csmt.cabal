@@ -130,9 +130,11 @@ library http
     Cardano.StakeCSMT.HTTP.Base16
     Cardano.StakeCSMT.HTTP.Query
     Cardano.StakeCSMT.HTTP.Server
+    Cardano.StakeCSMT.HTTP.Swagger
 
   build-depends:
     , aeson
+    , aeson-pretty
     , base                       <5
     , base16-bytestring
     , bytestring
@@ -142,11 +144,15 @@ library http
     , http-types
     , lens
     , mts:csmt
+    , network
     , rocksdb-kv-transactions:kv-transactions
     , servant-server
+    , servant-swagger
+    , servant-swagger-ui
     , swagger2
     , text
     , wai
+    , wai-cors
     , warp
 
 library application
@@ -161,6 +167,10 @@ library application
   build-depends:
     , base                    <5
     , cardano-stake-csmt:http
+    , cardano-stake-csmt:library
+    , rocksdb-haskell-jprupp
+    , rocksdb-kv-transactions:kv-transactions
+    , wai
 
 executable cardano-stake-csmt
   import:           warnings
@@ -179,6 +189,7 @@ test-suite unit-tests
   default-language: Haskell2010
   other-modules:
     Cardano.StakeCSMT.Application.HealthSpec
+    Cardano.StakeCSMT.Application.RunSpec
     Cardano.StakeCSMT.CSMT.BuilderSpec
     Cardano.StakeCSMT.CSMT.CodecsSpec
     Cardano.StakeCSMT.CSMT.RocksDBSpec
@@ -189,6 +200,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
+    Cardano.StakeCSMT.HTTP.SwaggerSpec
     Cardano.StakeCSMT.Ledger.CheckpointSpec
     Cardano.StakeCSMT.Ledger.ConfigSpec
     Cardano.StakeCSMT.Ledger.ReplaySpec
@@ -200,6 +212,7 @@ test-suite unit-tests
     , bytestring
     , cardano-crypto-class
     , cardano-slotting
+    , cardano-stake-csmt:application
     , cardano-stake-csmt:http
     , cardano-stake-csmt:library
     , cardano-ledger-core

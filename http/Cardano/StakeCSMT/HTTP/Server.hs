@@ -6,9 +6,13 @@ module Cardano.StakeCSMT.HTTP.Server
     ( application
     , apiApp
     , apiServer
+    , docsApp
     , QueryHandlers (..)
     , responseForPath
+    , runAPIServer
+    , runDocsServer
     , runHttpServer
+    , unavailableHandlers
     ) where
 
 import Cardano.Ledger.Credential
@@ -33,6 +37,10 @@ import Cardano.StakeCSMT.HTTP.API
     , api
     , parseCredentialBase16
     )
+import Cardano.StakeCSMT.HTTP.Swagger
+    ( SwaggerAPI
+    , swaggerServer
+    )
 import Control.Exception
     ( Exception
     , throwIO
@@ -46,6 +54,9 @@ import Data.Aeson
     )
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as ByteString.Lazy
+import Data.Proxy
+    ( Proxy (..)
+    )
 import Data.Text (Text)
 import Data.Text qualified as Text
 import Data.Text.Encoding qualified as Text.Encoding
@@ -54,10 +65,16 @@ import Network.HTTP.Types
     , status200
     , status404
     )
+import Network.Socket
+    ( PortNumber
+    )
 import Network.Wai
     ( Application
     )
 import Network.Wai.Handler.Warp qualified as Warp
+import Network.Wai.Middleware.Cors
+    ( simpleCors
+    )
 import Servant
     ( Handler
     , Server
@@ -86,7 +103,11 @@ application =
 
 apiApp :: QueryHandlers -> Application
 apiApp handlers =
-    serve api $ apiServer handlers
+    simpleCors $ serve api $ apiServer handlers
+
+docsApp :: Maybe PortNumber -> Application
+docsApp mApiPort =
+    simpleCors $ serve (Proxy @SwaggerAPI) $ swaggerServer mApiPort
 
 apiServer :: QueryHandlers -> Server API
 apiServer QueryHandlers{..} =
@@ -166,8 +187,17 @@ responseForPath = \case
     ["ready"] -> (status200, encode $ ReadyResponse True)
     _ -> (status404, "not found\n")
 
+runAPIServer :: Int -> QueryHandlers -> IO ()
+runAPIServer port handlers =
+    Warp.run port $ apiApp handlers
+
+runDocsServer :: Int -> Maybe Int -> IO ()
+runDocsServer port mApiPort =
+    Warp.run port $ docsApp $ fromIntegral <$> mApiPort
+
 runHttpServer :: Int -> IO ()
-runHttpServer port = Warp.run port application
+runHttpServer port =
+    runAPIServer port unavailableHandlers
 
 statusBody :: Text -> ByteString
 statusBody =

@@ -5,20 +5,124 @@ Description : Application entrypoint wiring.
 Runs the scaffold HTTP server with static health and readiness routes.
 -}
 module Cardano.StakeCSMT.Application.Run.Main
-    ( main
+    ( RuntimeApplications (..)
+    , applications
+    , main
     , run
+    , runWithHandlers
+    , withRuntimeHandlers
     ) where
 
 import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
+    , configApiPort
     , defaultConfig
     )
-import Cardano.StakeCSMT.HTTP.Server
-    ( runHttpServer
+import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
+import Cardano.StakeCSMT.CSMT.RocksDB
+    ( mkStakeCSMTDatabase
+    , withStakeCSMTRocksDB
     )
+import Cardano.StakeCSMT.HTTP.API
+    ( ReadyResponse (..)
+    )
+import Cardano.StakeCSMT.HTTP.Query qualified as Query
+import Cardano.StakeCSMT.HTTP.Server
+    ( QueryHandlers (..)
+    , apiApp
+    , docsApp
+    , runAPIServer
+    , runDocsServer
+    , unavailableHandlers
+    )
+import Cardano.StakeCSMT.History.Columns qualified as History
+import Cardano.StakeCSMT.History.RocksDB
+    ( mkHistoryDatabase
+    , withHistoryRocksDB
+    )
+import Control.Concurrent
+    ( forkIO
+    )
+import Control.Monad
+    ( void
+    )
+import Database.KV.Database
+    ( Database
+    )
+import Database.KV.Transaction
+    ( runTransactionUnguarded
+    )
+import Database.RocksDB
+    ( BatchOp
+    , ColumnFamily
+    )
+import Network.Wai
+    ( Application
+    )
+
+data RuntimeApplications = RuntimeApplications
+    { runtimeApiApp :: Application
+    , runtimeDocsApp :: Maybe Application
+    }
 
 main :: IO ()
 main = run defaultConfig
 
 run :: RuntimeConfig -> IO ()
-run RuntimeConfig{configPort} = runHttpServer configPort
+run config =
+    withRuntimeHandlers config $ runWithHandlers config
+
+runWithHandlers :: RuntimeConfig -> QueryHandlers -> IO ()
+runWithHandlers config handlers = do
+    case configDocsPort config of
+        Nothing -> pure ()
+        Just docsPort ->
+            void
+                $ forkIO
+                $ runDocsServer
+                    docsPort
+                    (Just $ configApiPort config)
+    runAPIServer (configApiPort config) handlers
+
+applications :: RuntimeConfig -> QueryHandlers -> RuntimeApplications
+applications config handlers =
+    RuntimeApplications
+        { runtimeApiApp = apiApp handlers
+        , runtimeDocsApp =
+            docsApp (Just $ fromIntegral $ configApiPort config)
+                <$ configDocsPort config
+        }
+
+withRuntimeHandlers
+    :: RuntimeConfig -> (QueryHandlers -> IO a) -> IO a
+withRuntimeHandlers RuntimeConfig{configStakeDbPath, configHistoryDbPath} action =
+    case (configStakeDbPath, configHistoryDbPath) of
+        (Just stakeDbPath, Just historyDbPath) ->
+            withStakeCSMTRocksDB stakeDbPath $ \stakeRocksDB ->
+                withHistoryRocksDB historyDbPath $ \historyRocksDB ->
+                    action
+                        $ runtimeHandlers
+                            (mkStakeCSMTDatabase stakeRocksDB)
+                            (mkHistoryDatabase historyRocksDB)
+        _ ->
+            action unavailableHandlers
+
+runtimeHandlers
+    :: Database IO ColumnFamily Stake.Columns BatchOp
+    -> Database IO ColumnFamily History.Columns BatchOp
+    -> QueryHandlers
+runtimeHandlers stakeDb historyDb =
+    QueryHandlers
+        { queryLatestProof =
+            runTransactionUnguarded stakeDb . Query.queryLatestProof
+        , queryHistoricalProof =
+            \epoch credential ->
+                runTransactionUnguarded stakeDb
+                    $ Query.queryHistoricalProof epoch credential
+        , queryEpochRoots =
+            runTransactionUnguarded stakeDb Query.queryEpochRoots
+        , queryHistoryRoot =
+            runTransactionUnguarded historyDb Query.queryCurrentHistoryRoot
+        , queryReady =
+            pure ReadyResponse{ready = True}
+        }
