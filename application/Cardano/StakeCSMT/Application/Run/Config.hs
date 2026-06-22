@@ -10,11 +10,19 @@ module Cardano.StakeCSMT.Application.Run.Config
     , defaultConfig
     ) where
 
+import Cardano.Crypto.DSIGN.Class
+    ( SignKeyDSIGN
+    )
+import Cardano.Crypto.DSIGN.Ed25519
+    ( Ed25519DSIGN
+    )
+
 data RuntimeConfig = RuntimeConfig
     { configPort :: Int
     , configDocsPort :: ~(Maybe Int)
     , configStakeDbPath :: ~(Maybe FilePath)
     , configHistoryDbPath :: ~(Maybe FilePath)
+    , configSigningKey :: ~(Maybe (SignKeyDSIGN Ed25519DSIGN))
     }
     deriving stock (Eq, Show)
 
@@ -30,4 +38,5 @@ defaultConfig =
         , configDocsPort = Nothing
         , configStakeDbPath = Nothing
         , configHistoryDbPath = Nothing
+        , configSigningKey = Nothing
         }

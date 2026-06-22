@@ -25,10 +25,10 @@
 
 ## Slice 4 - Signed Latest Header
 
-- [ ] T015-S4 Add `Cardano.StakeCSMT.HTTP.Signing` with deterministic latest-header payload bytes and Ed25519 sign/verify helpers.
-- [ ] T016-S4 Include the signed latest header in latest proof responses or an adjacent latest-header response shape, with public key and signature bytes in base16.
-- [ ] T017-S4 Add tests proving the signature verifies for the exact `(epoch, stakeRoot, totalStake)` payload and fails when any field changes.
-- [ ] T018-S4 Run the focused HTTP signing test and `./gate.sh`, then commit as `feat(http): sign latest stake root header`.
+- [x] T015-S4 Add `Cardano.StakeCSMT.HTTP.Signing` with deterministic latest-header payload bytes and Ed25519 sign/verify helpers.
+- [x] T016-S4 Include the signed latest header in latest proof responses or an adjacent latest-header response shape, with public key and signature bytes in base16.
+- [x] T017-S4 Add tests proving the signature verifies for the exact `(epoch, stakeRoot, totalStake)` payload and fails when any field changes.
+- [x] T018-S4 Run the focused HTTP signing test and `./gate.sh`, then commit as `feat(http): sign latest stake root header`.
 
 ## Finalization
 

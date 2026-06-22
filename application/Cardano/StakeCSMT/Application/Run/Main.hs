@@ -13,6 +13,12 @@ module Cardano.StakeCSMT.Application.Run.Main
     , withRuntimeHandlers
     ) where
 
+import Cardano.Crypto.DSIGN.Class
+    ( SignKeyDSIGN
+    )
+import Cardano.Crypto.DSIGN.Ed25519
+    ( Ed25519DSIGN
+    )
 import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
     , configApiPort
@@ -95,23 +101,31 @@ applications config handlers =
 
 withRuntimeHandlers
     :: RuntimeConfig -> (QueryHandlers -> IO a) -> IO a
-withRuntimeHandlers RuntimeConfig{configStakeDbPath, configHistoryDbPath} action =
-    case (configStakeDbPath, configHistoryDbPath) of
-        (Just stakeDbPath, Just historyDbPath) ->
-            withStakeCSMTRocksDB stakeDbPath $ \stakeRocksDB ->
-                withHistoryRocksDB historyDbPath $ \historyRocksDB ->
-                    action
-                        $ runtimeHandlers
-                            (mkStakeCSMTDatabase stakeRocksDB)
-                            (mkHistoryDatabase historyRocksDB)
-        _ ->
-            action unavailableHandlers
+withRuntimeHandlers
+    RuntimeConfig
+        { configStakeDbPath
+        , configHistoryDbPath
+        , configSigningKey
+        }
+    action =
+        case (configStakeDbPath, configHistoryDbPath) of
+            (Just stakeDbPath, Just historyDbPath) ->
+                withStakeCSMTRocksDB stakeDbPath $ \stakeRocksDB ->
+                    withHistoryRocksDB historyDbPath $ \historyRocksDB ->
+                        action
+                            $ runtimeHandlers
+                                (mkStakeCSMTDatabase stakeRocksDB)
+                                (mkHistoryDatabase historyRocksDB)
+                                configSigningKey
+            _ ->
+                action unavailableHandlers
 
 runtimeHandlers
     :: Database IO ColumnFamily Stake.Columns BatchOp
     -> Database IO ColumnFamily History.Columns BatchOp
+    -> Maybe (SignKeyDSIGN Ed25519DSIGN)
     -> QueryHandlers
-runtimeHandlers stakeDb historyDb =
+runtimeHandlers stakeDb historyDb mSigningKey =
     QueryHandlers
         { queryLatestProof =
             runTransactionUnguarded stakeDb . Query.queryLatestProof
@@ -121,6 +135,12 @@ runtimeHandlers stakeDb historyDb =
                     $ Query.queryHistoricalProof epoch credential
         , queryEpochRoots =
             runTransactionUnguarded stakeDb Query.queryEpochRoots
+        , queryLatestHeader =
+            case mSigningKey of
+                Nothing -> pure Nothing
+                Just signingKey ->
+                    runTransactionUnguarded stakeDb
+                        $ Query.querySignedLatestHeader signingKey
         , queryHistoryRoot =
             runTransactionUnguarded historyDb Query.queryCurrentHistoryRoot
         , queryReady =

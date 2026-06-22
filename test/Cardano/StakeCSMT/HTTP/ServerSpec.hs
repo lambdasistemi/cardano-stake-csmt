@@ -20,6 +20,7 @@ import Cardano.Slotting.Slot
     )
 import Cardano.StakeCSMT.HTTP.API
     ( HistoryRootResponse (..)
+    , LatestHeaderResponse (..)
     , MetricsResponse (..)
     , ReadyResponse (..)
     , StakeProofResponse (..)
@@ -151,6 +152,28 @@ spec = do
             WaiTest.simpleBody response
                 `shouldBe` "[{\"epoch\":42,\"stakeRoot\":\"abcd\",\"totalStake\":60}]"
 
+        it "maps missing latest header to 404" $ do
+            response <-
+                get
+                    "/latest-header"
+                    defaultHandlers
+                        { queryLatestHeader = pure Nothing
+                        }
+            WaiTest.simpleStatus response `shouldBe` status404
+
+        it "serves latest header from the injected query action" $ do
+            response <-
+                get
+                    "/latest-header"
+                    defaultHandlers
+                        { queryLatestHeader =
+                            pure $ Just latestHeaderResponse
+                        }
+
+            WaiTest.simpleStatus response `shouldBe` status200
+            WaiTest.simpleBody response
+                `shouldBe` "{\"epoch\":42,\"publicKey\":\"beef\",\"signature\":\"cafe\",\"stakeRoot\":\"abcd\",\"totalStake\":60}"
+
         it "maps missing history root to 404" $ do
             response <-
                 get
@@ -217,6 +240,7 @@ defaultHandlers =
         { queryLatestProof = const $ pure $ Just proofResponse
         , queryHistoricalProof = \_ _ -> pure $ Just proofResponse
         , queryEpochRoots = pure []
+        , queryLatestHeader = pure $ Just latestHeaderResponse
         , queryHistoryRoot =
             pure $ Just HistoryRootResponse{historyRoot = "abcd"}
         , queryReady = pure ReadyResponse{ready = True}
@@ -239,6 +263,16 @@ rootResponse =
         { epoch = EpochNo 42
         , stakeRoot = "abcd"
         , totalStake = Coin 60
+        }
+
+latestHeaderResponse :: LatestHeaderResponse
+latestHeaderResponse =
+    LatestHeaderResponse
+        { epoch = EpochNo 42
+        , stakeRoot = "abcd"
+        , totalStake = Coin 60
+        , signature = "cafe"
+        , publicKey = "beef"
         }
 
 testCredential :: Credential Staking

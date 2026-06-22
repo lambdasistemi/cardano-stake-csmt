@@ -112,6 +112,8 @@ type API =
             :> Get '[JSON] StakeProofResponse
         :<|> "roots"
             :> Get '[JSON] [StakeRootResponse]
+        :<|> "latest-header"
+            :> Get '[JSON] LatestHeaderResponse
         :<|> "history-root"
             :> Get '[JSON] HistoryRootResponse
         :<|> "ready"
@@ -159,6 +161,8 @@ data LatestHeaderResponse = LatestHeaderResponse
     { epoch :: !EpochNo
     , stakeRoot :: !Text
     , totalStake :: !Coin
+    , signature :: !Text
+    , publicKey :: !Text
     }
     deriving stock (Eq, Show)
 
@@ -284,18 +288,29 @@ instance ToSchema MetricsResponse where
             "Minimal HTTP metrics for the stake service."
 
 instance ToJSON LatestHeaderResponse where
-    toJSON LatestHeaderResponse{epoch, stakeRoot, totalStake} =
-        object
-            [ "epoch" .= epochToWord64 epoch
-            , "stakeRoot" .= stakeRoot
-            , "totalStake" .= coinToInteger totalStake
-            ]
+    toJSON
+        LatestHeaderResponse
+            { epoch
+            , stakeRoot
+            , totalStake
+            , signature
+            , publicKey
+            } =
+            object
+                [ "epoch" .= epochToWord64 epoch
+                , "stakeRoot" .= stakeRoot
+                , "totalStake" .= coinToInteger totalStake
+                , "signature" .= signature
+                , "publicKey" .= publicKey
+                ]
 
 instance FromJSON LatestHeaderResponse where
     parseJSON = withObject "LatestHeaderResponse" $ \obj ->
         (LatestHeaderResponse . word64ToEpoch <$> (obj .: "epoch"))
             <*> obj .: "stakeRoot"
             <*> (Coin <$> obj .: "totalStake")
+            <*> obj .: "signature"
+            <*> obj .: "publicKey"
 
 instance ToSchema LatestHeaderResponse where
     declareNamedSchema _ =
@@ -304,8 +319,10 @@ instance ToSchema LatestHeaderResponse where
             [ SchemaField "epoch" (Proxy @Word64)
             , SchemaField "stakeRoot" (Proxy @String)
             , SchemaField "totalStake" (Proxy @Integer)
+            , SchemaField "signature" (Proxy @String)
+            , SchemaField "publicKey" (Proxy @String)
             ]
-            "Latest stake root header."
+            "Latest stake root header with Ed25519 signature material."
 
 renderCredentialBase16 :: Credential Staking -> Text
 renderCredentialBase16 =

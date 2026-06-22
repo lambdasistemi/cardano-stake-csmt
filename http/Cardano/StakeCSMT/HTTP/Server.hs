@@ -30,6 +30,7 @@ import Cardano.StakeCSMT.Application.Health
 import Cardano.StakeCSMT.HTTP.API
     ( API
     , HistoryRootResponse
+    , LatestHeaderResponse
     , MetricsResponse (..)
     , ReadyResponse (..)
     , StakeProofResponse
@@ -93,6 +94,7 @@ data QueryHandlers = QueryHandlers
     , queryHistoricalProof
         :: EpochNo -> Credential Staking -> IO (Maybe StakeProofResponse)
     , queryEpochRoots :: IO [StakeRootResponse]
+    , queryLatestHeader :: IO (Maybe LatestHeaderResponse)
     , queryHistoryRoot :: IO (Maybe HistoryRootResponse)
     , queryReady :: IO ReadyResponse
     }
@@ -115,6 +117,7 @@ apiServer QueryHandlers{..} =
         :<|> latestProofHandler
         :<|> historicalProofHandler
         :<|> rootsHandler
+        :<|> latestHeaderHandler
         :<|> historyRootHandler
         :<|> readyHandler
         :<|> metricsHandler
@@ -144,6 +147,9 @@ apiServer QueryHandlers{..} =
 
     rootsHandler =
         runQuery queryEpochRoots
+
+    latestHeaderHandler =
+        runQuery queryLatestHeader >>= maybe (throwError err404) pure
 
     historyRootHandler =
         runQuery queryHistoryRoot >>= maybe (throwError err404) pure
@@ -214,6 +220,7 @@ unavailableHandlers =
         { queryLatestProof = const unavailable
         , queryHistoricalProof = \_ _ -> unavailable
         , queryEpochRoots = unavailable
+        , queryLatestHeader = unavailable
         , queryHistoryRoot = unavailable
         , queryReady = pure ReadyResponse{ready = True}
         }

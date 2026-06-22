@@ -11,6 +11,7 @@ import Cardano.StakeCSMT.HTTP.APISpec qualified as APISpec
 import Cardano.StakeCSMT.HTTP.Base16Spec qualified as Base16Spec
 import Cardano.StakeCSMT.HTTP.QuerySpec qualified as QuerySpec
 import Cardano.StakeCSMT.HTTP.ServerSpec qualified as ServerSpec
+import Cardano.StakeCSMT.HTTP.SigningSpec qualified as SigningSpec
 import Cardano.StakeCSMT.HTTP.SwaggerSpec qualified as SwaggerSpec
 import Cardano.StakeCSMT.History.BuilderSpec qualified as HistoryBuilderSpec
 import Cardano.StakeCSMT.History.CodecsSpec qualified as HistoryCodecsSpec
@@ -31,6 +32,7 @@ main = hspec $ do
     APISpec.spec
     Base16Spec.spec
     QuerySpec.spec
+    SigningSpec.spec
     HistoryBuilderSpec.spec
     HistoryCodecsSpec.spec
     HistoryRocksDBSpec.spec

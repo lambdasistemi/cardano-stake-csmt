@@ -8,11 +8,18 @@ module Cardano.StakeCSMT.HTTP.Query
     ( queryHistoricalProof
     , queryLatestProof
     , queryEpochRoots
+    , querySignedLatestHeader
     , queryCurrentHistoryRoot
     ) where
 
 import CSMT.Hashes
     ( renderProof
+    )
+import Cardano.Crypto.DSIGN.Class
+    ( SignKeyDSIGN
+    )
+import Cardano.Crypto.DSIGN.Ed25519
+    ( Ed25519DSIGN
     )
 import Cardano.Ledger.Coin
     ( Coin
@@ -37,11 +44,15 @@ import Cardano.StakeCSMT.CSMT.Codecs
 import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
 import Cardano.StakeCSMT.HTTP.API
     ( HistoryRootResponse (..)
+    , LatestHeaderResponse
     , StakeProofResponse (..)
     , StakeRootResponse (..)
     , renderCredentialBase16
     , renderHashBase16
     , renderProofBase16
+    )
+import Cardano.StakeCSMT.HTTP.Signing
+    ( signLatestHeader
     )
 import Cardano.StakeCSMT.History.Builder qualified as HistoryBuilder
 import Cardano.StakeCSMT.History.Columns qualified as HistoryCols
@@ -96,6 +107,16 @@ queryEpochRoots =
         case mNext of
             Nothing -> pure $ reverse roots
             Just entry -> collect $ rootResponse entry : roots
+
+querySignedLatestHeader
+    :: (Monad m)
+    => SignKeyDSIGN Ed25519DSIGN
+    -> Transaction m cf Stake.Columns ops (Maybe LatestHeaderResponse)
+querySignedLatestHeader signingKey =
+    fmap signedHeaderResponse <$> iterating Stake.RootCol lastEntry
+  where
+    signedHeaderResponse Entry{entryKey = epoch, entryValue = EpochRoot{..}} =
+        signLatestHeader signingKey epoch epochRootHash epochRootTotalStake
 
 queryCurrentHistoryRoot
     :: (Monad m)
