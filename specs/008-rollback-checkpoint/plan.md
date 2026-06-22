@@ -37,7 +37,23 @@ Create the checkpoint module and focused unit tests:
 
 This slice makes the A-002 pivot explicit: rollback recovery is proved by finalized-boundary selection plus replay-tail retention, while full `ExtLedgerState` serialization is not used.
 
-### Slice 2: Replay Rollback Integration
+### Slice 2a: Checkpoint Tail Continuity Hardening
+
+Harden the checkpoint replay-tail foundation before integrating it into
+`Ledger.Replay`:
+
+- add a focused regression for the discovered boundary-before-oldest case;
+- make `recoverReplayTail` reject gapped retained tails when the selected
+  boundary is not covered by the current tail;
+- keep the slice scoped to `Ledger.Checkpoint` and its focused unit tests.
+
+This slice was split out of the original replay-integration slice after the
+RED work repeatedly stalled while trying to cover checkpoint continuity and
+replay follower integration in the same pass. The landed checkpoint-continuity
+RED is kept as the first narrow target; replay follower integration moves to
+Slice 2b.
+
+### Slice 2b: Replay Rollback Integration
 
 Wire the checkpoint API into `Ledger.Replay`:
 
@@ -47,7 +63,11 @@ Wire the checkpoint API into `Ledger.Replay`:
 - fall back to `Reset intersector` when the rollback target is outside checkpoint/tail retention;
 - preserve the current origin rollback behavior.
 
-Unit tests use a fake chain-sync runner and synthetic `Fetched` blocks/actions to prove reachable rollback from the finalized boundary, unreachable rollback, and post-rollback continuation.
+Unit tests use a fake chain-sync runner and synthetic `Fetched` blocks/actions
+to prove reachable rollback from the finalized boundary, unreachable rollback,
+origin rollback preservation, and post-rollback continuation. This slice starts
+only after Slice 2a proves checkpoint tail coverage cannot silently accept a
+gap.
 
 ### Slice 3: E2E Recovery Proof
 
