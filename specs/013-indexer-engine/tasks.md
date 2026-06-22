@@ -14,17 +14,17 @@
 
 ## Slice 2 - Replay Checkpoint Indexer
 
-- [ ] T005-S2 Extend `lib/Cardano/StakeCSMT/Indexer.hs` with `runIndexer`,
+- [X] T005-S2 Extend `lib/Cardano/StakeCSMT/Indexer.hs` with `runIndexer`,
   `runIndexerWith`, and `withIndexer` over supplied database handles,
   replay config, checkpoint config, and optional epoch-boundary hook.
-- [ ] T006-S2 Add `e2e-test/Cardano/StakeCSMT/E2E/IndexerSpec.hs` that
+- [X] T006-S2 Add `e2e-test/Cardano/StakeCSMT/E2E/IndexerSpec.hs` that
   captures devnet blocks, replays them through the indexer twice, asserts
   deterministic roots, verifies credential and history proofs, and exercises
   checkpoint recovery.
-- [ ] T007-S2 Register the e2e spec in `cardano-stake-csmt.cabal` and
+- [X] T007-S2 Register the e2e spec in `cardano-stake-csmt.cabal` and
   `e2e-test/main.hs` without changing config, daemon wiring, or HTTP
   semantics.
-- [ ] T008-S2 Run `nix develop --quiet -c just e2e` and `./gate.sh`, then
+- [X] T008-S2 Run `nix develop --quiet -c just e2e` and `./gate.sh`, then
   commit as `feat(indexer): replay finalized epoch boundaries`.
 
 ## Slice 3 - Finalization
