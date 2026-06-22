@@ -2,13 +2,13 @@
 
 ## Slice 1 - Readiness Signal
 
-- [ ] T001-S1 Add a daemon readiness signal in
+- [X] T001-S1 Add a daemon readiness signal in
   `application/Cardano/StakeCSMT/Application/Run/Main.hs` and thread it into
   `runtimeHandlers` / `QueryHandlers.queryReady`.
-- [ ] T002-S1 Update focused readiness coverage in
+- [X] T002-S1 Update focused readiness coverage in
   `test/Cardano/StakeCSMT/Application/RunSpec.hs` and, only if needed,
   `test/Cardano/StakeCSMT/HTTP/ServerSpec.hs`.
-- [ ] T003-S1 Run `nix develop --quiet -c just unit "Application.Run"` and
+- [X] T003-S1 Run `nix develop --quiet -c just unit "Application.Run"` and
   `./gate.sh`, then commit as
   `feat(app): add daemon readiness signal`.
 

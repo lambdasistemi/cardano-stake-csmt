@@ -25,9 +25,16 @@ import Cardano.StakeCSMT.Application.Run.Config
 import Cardano.StakeCSMT.Application.Run.Main
     ( RuntimeApplications (..)
     , applications
+    , markRuntimeReady
+    , newRuntimeReadinessSignal
+    , withRuntimeHandlersUsingReadiness
+    )
+import Cardano.StakeCSMT.HTTP.API
+    ( ReadyResponse (..)
     )
 import Cardano.StakeCSMT.HTTP.Server
-    ( unavailableHandlers
+    ( QueryHandlers (queryReady)
+    , unavailableHandlers
     )
 import Data.ByteString
     ( ByteString
@@ -205,6 +212,20 @@ spec =
                 Just docs -> do
                     docsResponse <- get "/swagger.json" docs
                     WaiTest.simpleStatus docsResponse `shouldBe` status200
+
+        it "threads runtime readiness through a shared signal"
+            $ withRuntimeFixture
+            $ \fixture -> do
+                readiness <- newRuntimeReadinessSignal
+                withRuntimeHandlersUsingReadiness
+                    readiness
+                    (expectedConfig fixture)
+                    $ \handlers -> do
+                        queryReady handlers
+                            >>= (`shouldBe` ReadyResponse{ready = False})
+                        markRuntimeReady readiness
+                        queryReady handlers
+                            >>= (`shouldBe` ReadyResponse{ready = True})
 
 data RuntimeFixture = RuntimeFixture
     { fixtureRoot :: FilePath
