@@ -29,9 +29,9 @@
 
 ## Slice 3 - Finalization
 
-- [ ] T009-F Run `just ci` at HEAD.
-- [ ] T010-F Run `nix build .#default` and `nix build .#e2e-tests` at HEAD.
-- [ ] T011-F Update PR #30 body with delivered behavior and verification
+- [X] T009-F Run `just ci` at HEAD.
+- [X] T010-F Run `nix build .#default` and `nix build .#e2e-tests` at HEAD.
+- [X] T011-F Update PR #30 body with delivered behavior and verification
   evidence.
-- [ ] T012-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)`,
+- [X] T012-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)`,
   push, mark the PR ready, and report COMPLETE with PR URL and head SHA.
