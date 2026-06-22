@@ -25,7 +25,7 @@ spec = do
 
         it "serves /ready"
             $ responseForPath ["ready"]
-            `shouldBe` (status200, "ready\n")
+            `shouldBe` (status200, "{\"ready\":true}")
 
         it "rejects unknown routes"
             $ responseForPath ["missing"]
