@@ -209,9 +209,13 @@ test-suite e2e-tests
 
   build-depends:
     , base                           <5
+    , bytestring
+    , cardano-crypto-class
+    , cardano-ledger-core
     , cardano-node-clients
     , cardano-stake-csmt:application
     , cardano-stake-csmt:library
+    , cardano-slotting
     , cardano-node-clients:devnet
     , chain-follower
     , containers
@@ -219,4 +223,5 @@ test-suite e2e-tests
     , hspec
     , ouroboros-consensus:ouroboros-consensus
     , ouroboros-network:api
+    , rocksdb-kv-transactions:kv-transactions
     , temporary

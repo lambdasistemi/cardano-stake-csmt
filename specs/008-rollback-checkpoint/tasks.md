@@ -31,9 +31,9 @@
 
 ## Slice 3b - E2E History Invariance Proof
 
-- [ ] T018-S3B Verify a finalized history root/leaf written before the volatile rollback remains unchanged after recovery.
-- [ ] T019-S3B Register any e2e-only dependency needed by the test, without changing CSMT or history modules.
-- [ ] T020-S3B Run `./gate.sh` and commit as `test(e2e): prove rollback preserves history`.
+- [X] T018-S3B Verify a finalized history root/leaf written before the volatile rollback remains unchanged after recovery.
+- [X] T019-S3B Register any e2e-only dependency needed by the test, without changing CSMT or history modules.
+- [X] T020-S3B Run `./gate.sh` and commit as `test(e2e): prove rollback preserves history`.
 
 ## Finalization
 
