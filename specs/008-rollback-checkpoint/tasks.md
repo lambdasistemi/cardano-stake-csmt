@@ -23,16 +23,20 @@
 - [X] T013-S2B Add replay unit tests for reachable rollback, unreachable rollback, origin rollback, and post-rollback continuation.
 - [X] T014-S2B Run `./gate.sh` and commit as `feat(ledger): rewind replay state on rollback`.
 
-## Slice 3 - E2E Rollback Recovery Proof
+## Slice 3a - E2E Replay Recovery Proof
 
-- [ ] T015-S3 Extend e2e replay coverage with a devnet finalized-boundary checkpoint/rollback/replay-tail recovery proof.
-- [ ] T016-S3 Verify ledger state re-derived from the finalized boundary and latest recomputed tree/root match direct replay to the same point.
-- [ ] T017-S3 Verify a finalized history root/leaf written before the volatile rollback remains unchanged after recovery.
-- [ ] T018-S3 Register any e2e-only dependency needed by the test, without changing CSMT or history modules.
-- [ ] T019-S3 Run `./gate.sh` and commit as `test(e2e): prove rollback checkpoint recovery`.
+- [ ] T015-S3A Extend e2e replay coverage with a devnet finalized-boundary checkpoint/rollback/replay-tail recovery proof.
+- [ ] T016-S3A Verify ledger state re-derived from the finalized boundary and recovered replay observation matches direct replay to the same point.
+- [ ] T017-S3A Run `./gate.sh` and commit as `test(e2e): prove checkpoint rollback recovery`.
+
+## Slice 3b - E2E History Invariance Proof
+
+- [ ] T018-S3B Verify a finalized history root/leaf written before the volatile rollback remains unchanged after recovery.
+- [ ] T019-S3B Register any e2e-only dependency needed by the test, without changing CSMT or history modules.
+- [ ] T020-S3B Run `./gate.sh` and commit as `test(e2e): prove rollback preserves history`.
 
 ## Finalization
 
-- [ ] T020-F Run `nix develop -c just ci` at HEAD.
-- [ ] T021-F Update PR body with delivered behavior and verification evidence.
-- [ ] T022-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
+- [ ] T021-F Run `nix develop -c just ci` at HEAD.
+- [ ] T022-F Update PR body with delivered behavior and verification evidence.
+- [ ] T023-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
