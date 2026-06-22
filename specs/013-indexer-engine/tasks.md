@@ -2,14 +2,14 @@
 
 ## Slice 1 - Writer Primitive
 
-- [ ] T001-S1 Add `lib/Cardano/StakeCSMT/Indexer.hs` with `IndexedEpoch`,
+- [X] T001-S1 Add `lib/Cardano/StakeCSMT/Indexer.hs` with `IndexedEpoch`,
   `EpochBoundaryHook`, and `indexStakeSnapshot`.
-- [ ] T002-S1 Add `test/Cardano/StakeCSMT/IndexerSpec.hs` covering non-empty
+- [X] T002-S1 Add `test/Cardano/StakeCSMT/IndexerSpec.hs` covering non-empty
   snapshot writes, stored epoch root, current history root, credential proof
   verification, and epoch-root history proof verification.
-- [ ] T003-S1 Register the library module and unit spec in
+- [X] T003-S1 Register the library module and unit spec in
   `cardano-stake-csmt.cabal` and `test/main.hs`.
-- [ ] T004-S1 Run `nix develop --quiet -c just unit "Indexer"` and
+- [X] T004-S1 Run `nix develop --quiet -c just unit "Indexer"` and
   `./gate.sh`, then commit as `feat(indexer): add epoch snapshot writer`.
 
 ## Slice 2 - Replay Checkpoint Indexer

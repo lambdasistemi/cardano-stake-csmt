@@ -16,6 +16,7 @@ import Cardano.StakeCSMT.HTTP.SwaggerSpec qualified as SwaggerSpec
 import Cardano.StakeCSMT.History.BuilderSpec qualified as HistoryBuilderSpec
 import Cardano.StakeCSMT.History.CodecsSpec qualified as HistoryCodecsSpec
 import Cardano.StakeCSMT.History.RocksDBSpec qualified as HistoryRocksDBSpec
+import Cardano.StakeCSMT.IndexerSpec qualified as IndexerSpec
 import Cardano.StakeCSMT.Ledger.CheckpointSpec qualified as LedgerCheckpointSpec
 import Cardano.StakeCSMT.Ledger.ConfigSpec qualified as LedgerConfigSpec
 import Cardano.StakeCSMT.Ledger.ReplaySpec qualified as LedgerReplaySpec
@@ -36,6 +37,7 @@ main = hspec $ do
     HistoryBuilderSpec.spec
     HistoryCodecsSpec.spec
     HistoryRocksDBSpec.spec
+    IndexerSpec.spec
     ServerSpec.spec
     SwaggerSpec.spec
     LedgerCheckpointSpec.spec
