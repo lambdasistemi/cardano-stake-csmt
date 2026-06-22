@@ -18,8 +18,8 @@
 
 ## Finalization
 
-- [ ] T011-F Run `nix develop -c just ci` at HEAD.
-- [ ] T012-F Run `nix build .#default .#e2e-tests` at HEAD.
-- [ ] T013-F Run strict MkDocs build at HEAD.
-- [ ] T014-F Update the draft PR body with delivered behavior, verification evidence, missing-secret follow-ups, and release/docs notes.
-- [ ] T015-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
+- [X] T011-F Run `nix develop -c just ci` at HEAD.
+- [X] T012-F Run `nix build .#default .#e2e-tests` at HEAD.
+- [X] T013-F Run strict MkDocs build at HEAD.
+- [X] T014-F Update the draft PR body with delivered behavior, verification evidence, missing-secret follow-ups, and release/docs notes.
+- [X] T015-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
