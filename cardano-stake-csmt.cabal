@@ -79,6 +79,7 @@ library library
     Cardano.StakeCSMT.History.Codecs
     Cardano.StakeCSMT.History.Columns
     Cardano.StakeCSMT.History.RocksDB
+    Cardano.StakeCSMT.Indexer
     Cardano.StakeCSMT.Ledger.Config
     Cardano.StakeCSMT.Ledger.Checkpoint
     Cardano.StakeCSMT.Ledger.Replay
@@ -205,6 +206,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.History.BuilderSpec
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
+    Cardano.StakeCSMT.IndexerSpec
     Cardano.StakeCSMT.HTTP.ServerSpec
     Cardano.StakeCSMT.HTTP.SigningSpec
     Cardano.StakeCSMT.HTTP.SwaggerSpec
