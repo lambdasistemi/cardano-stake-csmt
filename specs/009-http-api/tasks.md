@@ -32,6 +32,6 @@
 
 ## Finalization
 
-- [ ] T019-F Run `nix develop -c just ci` at HEAD.
-- [ ] T020-F Update PR body with delivered behavior and verification evidence.
-- [ ] T021-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
+- [x] T019-F Run `nix develop -c just ci` at HEAD.
+- [x] T020-F Update PR body with delivered behavior and verification evidence.
+- [x] T021-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)` and mark the PR ready.
