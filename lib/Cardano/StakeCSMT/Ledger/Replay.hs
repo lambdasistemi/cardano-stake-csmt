@@ -1,5 +1,6 @@
 module Cardano.StakeCSMT.Ledger.Replay
     ( EpochTransition (..)
+    , ReplayCheckpointConfig (..)
     , ReplayState (..)
     , ReplayChainSyncRunner
     , ReplayFollowerConfig (..)
@@ -8,6 +9,7 @@ module Cardano.StakeCSMT.Ledger.Replay
     , observeEpochTransition
     , replayBlock
     , runReplayFollower
+    , runReplayFollowerWithCheckpoints
     , runReplayFollowerWith
     )
 where
@@ -24,6 +26,20 @@ import Cardano.Node.Client.N2C.ChainSync
 import Cardano.Slotting.Slot
     ( SlotNo (..)
     )
+import Cardano.StakeCSMT.Ledger.Checkpoint
+    ( CheckpointPoint (..)
+    , ReplayCheckpoint (..)
+    , ReplayTail
+    , appendReplayTail
+    , checkpointPointFromHeaderPoint
+    , emptyReplayTail
+    , listReplayCheckpoints
+    , loadReplayCheckpoint
+    , nearestCheckpointAtOrBefore
+    , recoverReplayTail
+    , saveReplayCheckpoint
+    , truncateReplayTailAfter
+    )
 import Cardano.StakeCSMT.Ledger.Config
     ( LedgerConfigBundle (..)
     , StakeBlock
@@ -36,6 +52,9 @@ import ChainFollower
     )
 import Control.Exception
     ( SomeException
+    )
+import Control.Monad
+    ( foldM
     )
 import Control.Tracer
     ( Tracer
@@ -83,6 +102,16 @@ data ReplayFollowerConfig = ReplayFollowerConfig
     { replayFollowerSocketPath :: !FilePath
     , replayFollowerNetworkMagic :: !NetworkMagic
     , replayFollowerByronEpochSlots :: !Word64
+    }
+
+data ReplayCheckpointConfig = ReplayCheckpointConfig
+    { replayCheckpointDirectory :: !FilePath
+    , replayCheckpointTailLimit :: !Int
+    , replayCheckpointCadence :: !Word64
+    , replayCheckpointSaveState
+        :: !(ReplayCheckpoint -> ReplayState -> IO ())
+    , replayCheckpointLoadState
+        :: !(ReplayCheckpoint -> IO (Maybe ReplayState))
     }
 
 type ReplayChainSyncRunner =
@@ -181,6 +210,32 @@ runReplayFollowerWith
             (mkReplayIntersector bundle replayAction)
             [originPoint]
 
+runReplayFollowerWithCheckpoints
+    :: ReplayChainSyncRunner
+    -> (ReplayState -> StakeBlock -> IO ReplayState)
+    -> LedgerConfigBundle
+    -> ReplayFollowerConfig
+    -> ReplayCheckpointConfig
+    -> IO (Either SomeException ())
+runReplayFollowerWithCheckpoints
+    chainSyncRunner
+    replayAction
+    bundle
+    ReplayFollowerConfig
+        { replayFollowerSocketPath
+        , replayFollowerNetworkMagic
+        , replayFollowerByronEpochSlots
+        }
+    checkpointConfig =
+        chainSyncRunner
+            (EpochSlots replayFollowerByronEpochSlots)
+            replayFollowerNetworkMagic
+            replayFollowerSocketPath
+            nullTracer
+            nullTracer
+            (mkCheckpointReplayIntersector bundle replayAction checkpointConfig)
+            [originPoint]
+
 defaultReplayChainSyncRunner :: ReplayChainSyncRunner
 defaultReplayChainSyncRunner
     epochSlots
@@ -227,6 +282,177 @@ mkReplayFollower intersector replayAction state =
             Network.Point (Network.Point.At _) ->
                 pure $ Reset intersector
         }
+
+mkCheckpointReplayIntersector
+    :: LedgerConfigBundle
+    -> (ReplayState -> StakeBlock -> IO ReplayState)
+    -> ReplayCheckpointConfig
+    -> Intersector HeaderPoint Network.SlotNo Fetched
+mkCheckpointReplayIntersector bundle replayAction checkpointConfig = intersector
+  where
+    intersector =
+        Intersector
+            { intersectFound = \_point ->
+                mkCheckpointReplayFollower
+                    intersector
+                    replayAction
+                    checkpointConfig
+                    <$> initialReplayState bundle
+                    <*> pure emptyReplayTail
+            , intersectNotFound =
+                pure (intersector, [originPoint])
+            }
+
+mkCheckpointReplayFollower
+    :: Intersector HeaderPoint Network.SlotNo Fetched
+    -> (ReplayState -> StakeBlock -> IO ReplayState)
+    -> ReplayCheckpointConfig
+    -> ReplayState
+    -> ReplayTail
+    -> Follower HeaderPoint Network.SlotNo Fetched
+mkCheckpointReplayFollower intersector replayAction checkpointConfig state replayTail =
+    Follower
+        { rollForward = \fetched _tip -> do
+            nextState <- replayAction state (fetchedBlock fetched)
+            saveReplayCheckpointAt checkpointConfig fetched nextState
+            let nextTail =
+                    appendReplayTail
+                        (replayCheckpointTailLimit checkpointConfig)
+                        fetched
+                        replayTail
+            pure
+                $ mkCheckpointReplayFollower
+                    intersector
+                    replayAction
+                    checkpointConfig
+                    nextState
+                    nextTail
+        , rollBackward = \case
+            Network.Point Network.Point.Origin ->
+                pure
+                    $ Progress
+                    $ mkCheckpointReplayFollower
+                        intersector
+                        replayAction
+                        checkpointConfig
+                        state
+                        replayTail
+            point -> do
+                recovery <-
+                    recoverReplayState
+                        replayAction
+                        checkpointConfig
+                        replayTail
+                        point
+                case recovery of
+                    Nothing ->
+                        pure $ Reset intersector
+                    Just (recoveredState, recoveredTail) ->
+                        pure
+                            $ Progress
+                            $ mkCheckpointReplayFollower
+                                intersector
+                                replayAction
+                                checkpointConfig
+                                recoveredState
+                                recoveredTail
+        }
+
+saveReplayCheckpointAt
+    :: ReplayCheckpointConfig
+    -> Fetched
+    -> ReplayState
+    -> IO ()
+saveReplayCheckpointAt checkpointConfig fetched state =
+    case checkpointPointFromHeaderPoint $ fetchedPoint fetched of
+        CheckpointOrigin ->
+            pure ()
+        point@(CheckpointAtBlock slot)
+            | shouldSaveReplayCheckpoint
+                (replayCheckpointCadence checkpointConfig)
+                slot -> do
+                let checkpoint =
+                        ReplayCheckpoint
+                            { replayCheckpointPoint = point
+                            , replayCheckpointFinalizedEpoch =
+                                replayStateLastEpoch state
+                            , replayCheckpointObservedEpoch =
+                                replayStateLastEpoch state
+                            }
+                _ <-
+                    saveReplayCheckpoint
+                        (replayCheckpointDirectory checkpointConfig)
+                        checkpoint
+                replayCheckpointSaveState checkpointConfig checkpoint state
+            | otherwise ->
+                pure ()
+
+shouldSaveReplayCheckpoint :: Word64 -> Word64 -> Bool
+shouldSaveReplayCheckpoint cadence slot =
+    cadence > 0 && slot `mod` cadence == 0
+
+recoverReplayState
+    :: (ReplayState -> StakeBlock -> IO ReplayState)
+    -> ReplayCheckpointConfig
+    -> ReplayTail
+    -> HeaderPoint
+    -> IO (Maybe (ReplayState, ReplayTail))
+recoverReplayState replayAction checkpointConfig replayTail rollbackPoint = do
+    let target = checkpointPointFromHeaderPoint rollbackPoint
+    checkpointPoints <-
+        listReplayCheckpoints $ replayCheckpointDirectory checkpointConfig
+    case nearestCheckpointAtOrBefore checkpointPoints target of
+        Nothing ->
+            pure Nothing
+        Just checkpointPoint -> do
+            checkpointResult <-
+                loadReplayCheckpoint
+                    (replayCheckpointDirectory checkpointConfig)
+                    checkpointPoint
+            case checkpointResult of
+                Left _err ->
+                    pure Nothing
+                Right checkpoint -> do
+                    checkpointState <-
+                        replayCheckpointLoadState checkpointConfig checkpoint
+                    case checkpointState of
+                        Nothing ->
+                            pure Nothing
+                        Just state ->
+                            recoverFromCheckpoint
+                                replayAction
+                                replayTail
+                                target
+                                checkpoint
+                                state
+
+recoverFromCheckpoint
+    :: (ReplayState -> StakeBlock -> IO ReplayState)
+    -> ReplayTail
+    -> CheckpointPoint
+    -> ReplayCheckpoint
+    -> ReplayState
+    -> IO (Maybe (ReplayState, ReplayTail))
+recoverFromCheckpoint replayAction replayTail target checkpoint state =
+    case recoverReplayTail
+        (replayCheckpointPoint checkpoint)
+        target
+        replayTail of
+        Nothing ->
+            pure Nothing
+        Just fetchedBlocks -> do
+            recoveredState <-
+                foldM
+                    ( \current fetched ->
+                        replayAction current $ fetchedBlock fetched
+                    )
+                    state
+                    fetchedBlocks
+            pure
+                $ Just
+                    ( recoveredState
+                    , truncateReplayTailAfter target replayTail
+                    )
 
 originPoint :: HeaderPoint
 originPoint =
