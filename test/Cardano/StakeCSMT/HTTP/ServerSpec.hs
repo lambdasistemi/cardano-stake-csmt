@@ -20,6 +20,7 @@ import Cardano.Slotting.Slot
     )
 import Cardano.StakeCSMT.HTTP.API
     ( HistoryRootResponse (..)
+    , MetricsResponse (..)
     , ReadyResponse (..)
     , StakeProofResponse (..)
     , StakeRootResponse (..)
@@ -28,6 +29,13 @@ import Cardano.StakeCSMT.HTTP.API
 import Cardano.StakeCSMT.HTTP.Server
     ( QueryHandlers (..)
     , apiApp
+    , docsApp
+    )
+import Data.Aeson
+    ( eitherDecode
+    )
+import Data.ByteString
+    ( ByteString
     )
 import Data.ByteString qualified as BS
 import Data.Text
@@ -35,13 +43,15 @@ import Data.Text
     )
 import Data.Text.Encoding qualified as Text
 import Network.HTTP.Types
-    ( methodGet
+    ( hContentType
+    , methodGet
     , status200
     , status400
     , status404
     )
 import Network.Wai
-    ( requestMethod
+    ( requestHeaders
+    , requestMethod
     )
 import Network.Wai.Test
     ( SResponse (..)
@@ -70,10 +80,41 @@ spec = do
                 WaiTest.simpleStatus response `shouldBe` status200
                 WaiTest.simpleBody response `shouldBe` "{\"ready\":true}"
 
+        it "serves /metrics"
+            $ do
+                response <- get "/metrics" defaultHandlers
+                WaiTest.simpleStatus response `shouldBe` status200
+                eitherDecode (WaiTest.simpleBody response)
+                    `shouldBe` Right
+                        MetricsResponse
+                            { ready = True
+                            , latestEpoch = Nothing
+                            }
+
+        it "adds CORS headers to API responses"
+            $ do
+                response <- getWithOrigin "/ready" defaultHandlers
+                WaiTest.simpleStatus response `shouldBe` status200
+                lookup
+                    "Access-Control-Allow-Origin"
+                    (WaiTest.simpleHeaders response)
+                    `shouldBe` Just "*"
+
         it "rejects unknown routes"
             $ do
                 response <- get "/missing" defaultHandlers
                 WaiTest.simpleStatus response `shouldBe` status404
+
+    describe "HTTP.Server docsApp" $ do
+        it "serves swagger JSON with CORS headers" $ do
+            response <- getDocsWithOrigin "/swagger.json"
+            WaiTest.simpleStatus response `shouldBe` status200
+            lookup
+                "Access-Control-Allow-Origin"
+                (WaiTest.simpleHeaders response)
+                `shouldBe` Just "*"
+            lookup hContentType (WaiTest.simpleHeaders response)
+                `shouldBe` Just "application/json;charset=utf-8"
 
     describe "HTTP.Server apiApp proof and root handlers" $ do
         it "maps invalid credential base16/CBOR to 400" $ do
@@ -139,6 +180,36 @@ get path handlers =
                 (Text.encodeUtf8 path)
         )
         (apiApp handlers)
+
+getWithOrigin :: Text -> QueryHandlers -> IO SResponse
+getWithOrigin path handlers =
+    runSession
+        ( WaiTest.request
+            $ WaiTest.setPath
+                WaiTest.defaultRequest
+                    { requestMethod = methodGet
+                    , requestHeaders =
+                        [ ("Origin", "https://example.test")
+                        ]
+                    }
+                (Text.encodeUtf8 path)
+        )
+        (apiApp handlers)
+
+getDocsWithOrigin :: ByteString -> IO SResponse
+getDocsWithOrigin path =
+    runSession
+        ( WaiTest.request
+            $ WaiTest.setPath
+                WaiTest.defaultRequest
+                    { requestMethod = methodGet
+                    , requestHeaders =
+                        [ ("Origin", "https://example.test")
+                        ]
+                    }
+                path
+        )
+        (docsApp Nothing)
 
 defaultHandlers :: QueryHandlers
 defaultHandlers =

@@ -17,11 +17,11 @@
 
 ## Slice 3 - Swagger, Readiness, Metrics, And Application Wiring
 
-- [ ] T010-S3 Add `Cardano.StakeCSMT.HTTP.Swagger` and Swagger UI/docs application support.
-- [ ] T011-S3 Add JSON `/ready` and `/metrics` responses and CORS-enabled API/docs WAI applications.
-- [ ] T012-S3 Wire `Application.Run.Config` and `Application.Run.Main` to run the HTTP API/docs servers with query actions.
-- [ ] T013-S3 Add focused tests for swagger JSON, ready/metrics responses, and application wiring.
-- [ ] T014-S3 Run the focused HTTP swagger/wiring test and `./gate.sh`, then commit as `feat(http): wire docs and service status`.
+- [x] T010-S3 Add `Cardano.StakeCSMT.HTTP.Swagger` and Swagger UI/docs application support.
+- [x] T011-S3 Add JSON `/ready` and `/metrics` responses and CORS-enabled API/docs WAI applications.
+- [x] T012-S3 Wire `Application.Run.Config` and `Application.Run.Main` to run the HTTP API/docs servers with query actions.
+- [x] T013-S3 Add focused tests for swagger JSON, ready/metrics responses, and application wiring.
+- [x] T014-S3 Run the focused HTTP swagger/wiring test and `./gate.sh`, then commit as `feat(http): wire docs and service status`.
 
 ## Slice 4 - Signed Latest Header
 
