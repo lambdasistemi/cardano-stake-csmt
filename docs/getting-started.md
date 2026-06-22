@@ -35,12 +35,6 @@ Run the complete local CI recipe:
 just ci
 ```
 
-Run the local gate:
-
-```sh
-./gate.sh
-```
-
 ## Build the executable
 
 Build the Nix package:
@@ -59,6 +53,52 @@ The default executable starts the API server on port `8080` with the
 default runtime configuration. Deployments that serve proofs wire the
 runtime with stake and history RocksDB paths and, when signed latest
 headers are required, an Ed25519 signing key.
+
+## Build release artifacts
+
+Build Linux development artifacts locally:
+
+```sh
+nix build .#linux-dev-release-artifacts
+```
+
+The artifact directory contains an AppImage, DEB, RPM, generic
+`cardano-stake-csmt.AppImage`, and `SHA256SUMS`. Smoke-test the
+artifacts without publishing them:
+
+```sh
+artifact_dir="$(readlink -f result)"
+artifact_version="$(scripts/release/get-cabal-version)-$(git rev-parse --short=7 HEAD)"
+nix run .#linux-artifact-smoke -- --artifacts-dir "$artifact_dir" --artifact-version "$artifact_version"
+```
+
+On macOS, the Darwin workflow builds `.#darwin-dev-homebrew-artifacts`
+through the shared Homebrew release action. Pull requests use local
+tarball and tap checks only; tag workflows publish after Cabal,
+changelog, and tag consistency checks.
+
+## Plan a release
+
+The Cabal file owns the project version:
+
+```sh
+scripts/release/get-cabal-version
+scripts/release/check-version-consistency
+```
+
+Preview the release planner without creating branches or tags:
+
+```sh
+RELEASE_PLAN_DRY_RUN=1 scripts/release/plan
+```
+
+The non-dry-run planner is intended for the `Release Planner` workflow
+on `main`. It creates or updates `release/cabal-release` with the next
+Cabal version and changelog notes, or creates `v<version>` after the
+Cabal version and changelog already match. Operators must configure
+`RELEASE_BOT_SSH_KEY`; Darwin/Homebrew publication also needs
+`TAP_TOKEN`, and `CACHIX_AUTH_TOKEN` enables cache pushes from release
+builds.
 
 ## Documentation
 
