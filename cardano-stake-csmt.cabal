@@ -248,6 +248,7 @@ test-suite e2e-tests
   hs-source-dirs:   e2e-test
   default-language: Haskell2010
   other-modules:
+    Cardano.StakeCSMT.E2E.IndexerSpec
     Cardano.StakeCSMT.E2E.ReplaySpec
 
   build-depends:
