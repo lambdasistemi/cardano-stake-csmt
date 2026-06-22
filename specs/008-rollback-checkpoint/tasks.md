@@ -2,11 +2,11 @@
 
 ## Slice 1 - Checkpoint Store Foundation
 
-- [ ] T001-S1 Add `Cardano.StakeCSMT.Ledger.Checkpoint` with checkpoint point metadata, nearest-at-or-before lookup, and bounded replay-tail helpers.
-- [ ] T002-S1 Add checkpoint encode/decode and file-backed save/load/list helpers for finalized-boundary checkpoint metadata, explicitly avoiding hand-rolled full `ExtLedgerState` serialization.
-- [ ] T003-S1 Register the checkpoint module, unit test module, and required library/test dependencies in `cardano-stake-csmt.cabal` and `test/main.hs`.
-- [ ] T004-S1 Add focused unit tests proving finalized-boundary checkpoint round-trip, nearest checkpoint selection, and replay-tail truncation/recovery behavior.
-- [ ] T005-S1 Run `./gate.sh` and commit as `feat(ledger): add replay checkpoint store`.
+- [x] T001-S1 Add `Cardano.StakeCSMT.Ledger.Checkpoint` with checkpoint point metadata, nearest-at-or-before lookup, and bounded replay-tail helpers.
+- [x] T002-S1 Add checkpoint encode/decode and file-backed save/load/list helpers for finalized-boundary checkpoint metadata, explicitly avoiding hand-rolled full `ExtLedgerState` serialization.
+- [x] T003-S1 Register the checkpoint module, unit test module, and required library/test dependencies in `cardano-stake-csmt.cabal` and `test/main.hs`.
+- [x] T004-S1 Add focused unit tests proving finalized-boundary checkpoint round-trip, nearest checkpoint selection, and replay-tail truncation/recovery behavior.
+- [x] T005-S1 Run `./gate.sh` and commit as `feat(ledger): add replay checkpoint store`.
 
 ## Slice 2 - Replay Rollback Integration
 
