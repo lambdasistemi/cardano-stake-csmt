@@ -6,8 +6,11 @@ Only the HTTP port is configurable in the initial scaffold.
 -}
 module Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
+    , apiPortEnvironmentVariable
     , configApiPort
     , defaultConfig
+    , runtimeConfigFromEnvironment
+    , runtimeConfigFromEnvironmentValues
     ) where
 
 import Cardano.Crypto.DSIGN.Class
@@ -15,6 +18,12 @@ import Cardano.Crypto.DSIGN.Class
     )
 import Cardano.Crypto.DSIGN.Ed25519
     ( Ed25519DSIGN
+    )
+import System.Environment
+    ( lookupEnv
+    )
+import Text.Read
+    ( readMaybe
     )
 
 data RuntimeConfig = RuntimeConfig
@@ -31,6 +40,10 @@ configApiPort :: RuntimeConfig -> Int
 configApiPort =
     configPort
 
+apiPortEnvironmentVariable :: String
+apiPortEnvironmentVariable =
+    "CARDANO_STAKE_CSMT_API_PORT"
+
 defaultConfig :: RuntimeConfig
 defaultConfig =
     RuntimeConfig
@@ -40,3 +53,35 @@ defaultConfig =
         , configHistoryDbPath = Nothing
         , configSigningKey = Nothing
         }
+
+runtimeConfigFromEnvironment :: IO RuntimeConfig
+runtimeConfigFromEnvironment = do
+    mApiPort <- lookupEnv apiPortEnvironmentVariable
+    case runtimeConfigFromEnvironmentValues
+        $ maybe
+            []
+            (\apiPort -> [(apiPortEnvironmentVariable, apiPort)])
+            mApiPort of
+        Left message -> fail message
+        Right config -> pure config
+
+runtimeConfigFromEnvironmentValues
+    :: [(String, String)] -> Either String RuntimeConfig
+runtimeConfigFromEnvironmentValues environment =
+    case lookup apiPortEnvironmentVariable environment of
+        Nothing ->
+            Right defaultConfig
+        Just rawApiPort -> do
+            apiPort <- parseApiPort rawApiPort
+            Right defaultConfig{configPort = apiPort}
+
+parseApiPort :: String -> Either String Int
+parseApiPort rawApiPort =
+    case readMaybe rawApiPort of
+        Just apiPort
+            | apiPort >= 1 && apiPort <= 65535 ->
+                Right apiPort
+        _ ->
+            Left
+                $ apiPortEnvironmentVariable
+                    <> " must be an integer between 1 and 65535"
