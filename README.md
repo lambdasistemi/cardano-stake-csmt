@@ -28,6 +28,31 @@ nix develop      # enter the dev shell
 just ci          # build + test + format-check + hlint
 ```
 
+## Install Artifacts
+
+Release tags publish Linux AppImage, DEB, RPM, and `SHA256SUMS`
+artifacts built from the flake. Pull requests build the same artifact
+shape with a development version suffix and smoke-test each package by
+starting the service locally and probing `/ready` plus `/health`.
+
+The Darwin release workflow builds a Homebrew tarball and formula for
+`lambdasistemi/homebrew-tap`. Pull requests use the shared local tap
+test path only; tag workflows publish the GitHub release asset and tap
+formula after Cabal, changelog, and tag consistency checks.
+
+## Release Process
+
+`cardano-stake-csmt.cabal` is the version source of truth. The release
+planner opens or updates `release/cabal-release` with the next Cabal
+version and generated `CHANGELOG.md` notes. After that PR merges, the
+next main-branch planner run creates `v<version>` when the Cabal file
+and changelog already match.
+
+Repository operators must configure `RELEASE_BOT_SSH_KEY` for planner
+branch and tag pushes. Darwin/Homebrew publication also needs
+`TAP_TOKEN`; `CACHIX_AUTH_TOKEN` lets macOS release builds populate the
+shared cache.
+
 ## License
 
 Apache-2.0

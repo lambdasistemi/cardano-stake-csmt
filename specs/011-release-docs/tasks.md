@@ -9,12 +9,12 @@
 
 ## Slice 2 - Cabal-Owned Release Pipeline And Artifacts
 
-- [ ] T005-S2 Add release planner scripts for Cabal version extraction, Cabal/changelog/tag consistency, changelog note extraction, release PR planning, and later `v<version>` tag creation.
-- [ ] T006-S2 Add flake-owned Linux AppImage, DEB, RPM, `SHA256SUMS`, development artifact, and Linux artifact smoke outputs.
-- [ ] T007-S2 Add flake-owned Darwin Homebrew release and development artifact outputs compatible with the shared lambdasistemi tap workflow.
-- [ ] T008-S2 Add release planner, Linux release, and Darwin release workflows with PR/dev modes that do not publish and tag modes that publish only after consistency checks.
-- [ ] T009-S2 Document install and release behavior in README/getting-started/CHANGELOG without publishing a real release.
-- [ ] T010-S2 Run the focused release checks and `./gate.sh`, then commit as `ci: add cabal-owned release pipeline`.
+- [X] T005-S2 Add release planner scripts for Cabal version extraction, Cabal/changelog/tag consistency, changelog note extraction, release PR planning, and later `v<version>` tag creation.
+- [X] T006-S2 Add flake-owned Linux AppImage, DEB, RPM, `SHA256SUMS`, development artifact, and Linux artifact smoke outputs.
+- [X] T007-S2 Add flake-owned Darwin Homebrew release and development artifact outputs compatible with the shared lambdasistemi tap workflow.
+- [X] T008-S2 Add release planner, Linux release, and Darwin release workflows with PR/dev modes that do not publish and tag modes that publish only after consistency checks.
+- [X] T009-S2 Document install and release behavior in README/getting-started/CHANGELOG without publishing a real release.
+- [X] T010-S2 Run the focused release checks and `./gate.sh`, then commit as `ci: add cabal-owned release pipeline`.
 
 ## Finalization
 
