@@ -377,6 +377,131 @@ spec =
                 stakeSnapshotTotalStake snapshot
                     `shouldBe` fold (Map.elems observedStake)
 
+        describe "golden"
+            $ it "proves roots and inclusion proofs from a real snapshot"
+            $ withObservedDevnetStakeSnapshot
+            $ \(epoch, snapshot) -> do
+                let observedStake = stakeSnapshotStake snapshot
+                observedStake `shouldSatisfy` (not . Map.null)
+                Map.lookup e2eGenesisStakingCredential observedStake
+                    `shouldBe` Just e2eGenesisStake
+
+                withSystemTempDirectory "stake-csmt-e2e-real-csmt"
+                    $ \csmtDirectory ->
+                        withSystemTempDirectory
+                            "stake-csmt-e2e-rebuilt-csmt"
+                            $ \rebuiltDirectory ->
+                                withSystemTempDirectory
+                                    "stake-csmt-e2e-real-history"
+                                    $ \historyDirectory ->
+                                        withStakeCSMTRocksDB csmtDirectory
+                                            $ \csmtRocksDB ->
+                                                withStakeCSMTRocksDB
+                                                    rebuiltDirectory
+                                                    $ \rebuiltRocksDB ->
+                                                        withHistoryRocksDB
+                                                            historyDirectory
+                                                            $ \historyRocksDB -> do
+                                                                let csmtDatabase =
+                                                                        mkStakeCSMTDatabase
+                                                                            csmtRocksDB
+                                                                    rebuiltDatabase =
+                                                                        mkStakeCSMTDatabase
+                                                                            rebuiltRocksDB
+                                                                    historyDatabase =
+                                                                        mkHistoryDatabase
+                                                                            historyRocksDB
+                                                                epochRoot <-
+                                                                    expectJust
+                                                                        "expected non-empty real epoch CSMT"
+                                                                        =<< runTransactionUnguarded
+                                                                            csmtDatabase
+                                                                            ( buildEpochCSMT
+                                                                                epoch
+                                                                                snapshot
+                                                                            )
+                                                                queriedEpochRoot <-
+                                                                    expectJust
+                                                                        "expected stored real epoch root"
+                                                                        =<< runTransactionUnguarded
+                                                                            csmtDatabase
+                                                                            ( queryEpochRoot
+                                                                                epoch
+                                                                            )
+                                                                queriedEpochRoot
+                                                                    `shouldBe` epochRoot
+                                                                rebuiltEpochRoot <-
+                                                                    expectJust
+                                                                        "expected reproducible real epoch CSMT"
+                                                                        =<< runTransactionUnguarded
+                                                                            rebuiltDatabase
+                                                                            ( buildEpochCSMT
+                                                                                epoch
+                                                                                snapshot
+                                                                            )
+                                                                rebuiltEpochRoot
+                                                                    `shouldBe` epochRoot
+                                                                ( credentialCoin
+                                                                    , credentialProof
+                                                                    ) <-
+                                                                    expectJust
+                                                                        "expected real credential proof"
+                                                                        =<< runTransactionUnguarded
+                                                                            csmtDatabase
+                                                                            ( buildCredentialProof
+                                                                                epoch
+                                                                                e2eGenesisStakingCredential
+                                                                            )
+                                                                credentialCoin
+                                                                    `shouldBe` e2eGenesisStake
+                                                                verifyCredentialProof
+                                                                    epochRoot
+                                                                    e2eGenesisStakingCredential
+                                                                    credentialCoin
+                                                                    credentialProof
+                                                                    `shouldBe` True
+                                                                historyRoot <-
+                                                                    runTransactionUnguarded
+                                                                        historyDatabase
+                                                                        ( finalizeEpochRoot
+                                                                            epoch
+                                                                            epochRoot
+                                                                        )
+                                                                historyLeaf <-
+                                                                    runTransactionUnguarded
+                                                                        historyDatabase
+                                                                        ( queryHistoryLeaf
+                                                                            epoch
+                                                                        )
+                                                                historyLeaf
+                                                                    `shouldBe` Just
+                                                                        epochRoot
+                                                                queriedHistoryRoot <-
+                                                                    runTransactionUnguarded
+                                                                        historyDatabase
+                                                                        queryHistoryRoot
+                                                                queriedHistoryRoot
+                                                                    `shouldBe` Just
+                                                                        historyRoot
+                                                                ( proofEpochRoot
+                                                                    , epochRootProof
+                                                                    ) <-
+                                                                    expectJust
+                                                                        "expected real epoch-root proof"
+                                                                        =<< runTransactionUnguarded
+                                                                            historyDatabase
+                                                                            ( buildEpochRootProof
+                                                                                epoch
+                                                                            )
+                                                                proofEpochRoot
+                                                                    `shouldBe` epochRoot
+                                                                verifyEpochRootProof
+                                                                    historyRoot
+                                                                    epoch
+                                                                    epochRoot
+                                                                    epochRootProof
+                                                                    `shouldBe` True
+
 captureDevnetFetchedBlocks
     :: LedgerConfigBundle
     -> ReplayFollowerConfig
@@ -427,6 +552,69 @@ replayFetchedBlocks bundle fetchedBlocks = do
         )
         state0
         fetchedBlocks
+
+withObservedDevnetStakeSnapshot
+    :: ((EpochNo, StakeSnapshot) -> IO a) -> IO a
+withObservedDevnetStakeSnapshot action =
+    withCardanoNode genesisDir $ \socketPath _startMs -> do
+        let nodeRuntimeDir = takeDirectory socketPath
+            config =
+                ReplayFollowerConfig
+                    { replayFollowerSocketPath = socketPath
+                    , replayFollowerNetworkMagic = NetworkMagic 42
+                    , replayFollowerByronEpochSlots = 21_600
+                    }
+        bundle <-
+            loadLedgerConfig
+                $ ledgerConfigPathsFromDirectory nodeRuntimeDir
+        snapshotRef <- newIORef Nothing
+        let replayAction state block = do
+                captured <- readIORef snapshotRef
+                case captured of
+                    Just _ ->
+                        pure state
+                    Nothing -> do
+                        nextState <-
+                            replayBlock
+                                bundle
+                                (const $ pure ())
+                                state
+                                block
+                        case stakeSnapshotFromLedgerState
+                            $ replayStateLedgerState nextState of
+                            Right snapshot
+                                | replayStateLastEpoch nextState > 0 ->
+                                    writeIORef snapshotRef
+                                        $ Just
+                                            ( EpochNo
+                                                $ replayStateLastEpoch
+                                                    nextState
+                                            , snapshot
+                                            )
+                            _ ->
+                                pure ()
+                        pure nextState
+
+        result <-
+            timeout 75_000_000
+                $ runReplayFollowerWith
+                    defaultReplayChainSyncRunner
+                    replayAction
+                    bundle
+                    config
+
+        case result of
+            Just (Left err) ->
+                expectationFailure
+                    $ "expected replay follower not to fail, got "
+                        <> show err
+            _ ->
+                pure ()
+        observed <-
+            expectJust
+                "expected a ledger snapshot after an epoch boundary"
+                =<< readIORef snapshotRef
+        action observed
 
 withFinalizedHistoryObservation
     :: (FinalizedHistoryObservation -> IO FinalizedHistoryObservation -> IO a)
