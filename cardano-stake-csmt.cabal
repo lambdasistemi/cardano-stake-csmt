@@ -128,6 +128,7 @@ library http
   exposed-modules:
     Cardano.StakeCSMT.HTTP.API
     Cardano.StakeCSMT.HTTP.Base16
+    Cardano.StakeCSMT.HTTP.Query
     Cardano.StakeCSMT.HTTP.Server
 
   build-depends:
@@ -141,6 +142,7 @@ library http
     , http-types
     , lens
     , mts:csmt
+    , rocksdb-kv-transactions:kv-transactions
     , servant-server
     , swagger2
     , text
@@ -182,6 +184,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.CSMT.RocksDBSpec
     Cardano.StakeCSMT.HTTP.APISpec
     Cardano.StakeCSMT.HTTP.Base16Spec
+    Cardano.StakeCSMT.HTTP.QuerySpec
     Cardano.StakeCSMT.History.BuilderSpec
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
@@ -211,6 +214,8 @@ test-suite unit-tests
     , rocksdb-kv-transactions:kv-transactions
     , temporary
     , text
+    , wai
+    , wai-extra
 
 test-suite e2e-tests
   import:           warnings
