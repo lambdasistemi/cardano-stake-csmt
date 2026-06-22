@@ -109,17 +109,29 @@ pkgs.writeShellApplication {
       fi
     }
 
+    choose_host_port() {
+      for port in $(seq 18080 18179); do
+        if ss -H -ltn "sport = :$port" 2>/dev/null | grep -q .; then
+          continue
+        fi
+        if curl --fail --silent --show-error --max-time 1 "http://127.0.0.1:$port/ready" >/dev/null 2>&1; then
+          continue
+        fi
+        printf '%s\n' "$port"
+        return
+      done
+
+      echo "linux-artifact-smoke: could not find a free localhost port in 18080-18179" >&2
+      exit 1
+    }
+
     probe_server_host() {
       bin="$1"
       label="$2"
       log="$3"
+      port="$(choose_host_port)"
 
-      if curl --fail --silent --show-error --max-time 1 http://127.0.0.1:8080/ready >/dev/null 2>&1; then
-        echo "linux-artifact-smoke: port 8080 already has a service on /ready" >&2
-        exit 1
-      fi
-
-      "$bin" >"$log" 2>&1 &
+      CARDANO_STAKE_CSMT_API_PORT="$port" "$bin" >"$log" 2>&1 &
       pid="$!"
 
       for _ in $(seq 1 60); do
@@ -130,7 +142,7 @@ pkgs.writeShellApplication {
         fi
 
         ready_body="$(
-          curl --fail --silent --show-error --max-time 1 http://127.0.0.1:8080/ready 2>/dev/null \
+          curl --fail --silent --show-error --max-time 1 "http://127.0.0.1:$port/ready" 2>/dev/null \
             || true
         )"
         if [ -n "$ready_body" ]; then
@@ -142,7 +154,7 @@ pkgs.writeShellApplication {
             }
 
           health_body="$(
-            curl --fail --silent --show-error --max-time 1 http://127.0.0.1:8080/health
+            curl --fail --silent --show-error --max-time 1 "http://127.0.0.1:$port/health"
           )"
           if [ "$health_body" != "ok" ]; then
             echo "linux-artifact-smoke: unexpected /health response from $label: $health_body" >&2
@@ -176,9 +188,10 @@ pkgs.writeShellApplication {
           bin="$1"
           label="$2"
           log="$3"
+          port=8080
 
           ip link set lo up
-          "$bin" >"$log" 2>&1 &
+          CARDANO_STAKE_CSMT_API_PORT="$port" "$bin" >"$log" 2>&1 &
           pid="$!"
 
           for _ in $(seq 1 60); do
@@ -189,7 +202,7 @@ pkgs.writeShellApplication {
             fi
 
             ready_body="$(
-              curl --fail --silent --show-error --max-time 1 http://127.0.0.1:8080/ready 2>/dev/null \
+              curl --fail --silent --show-error --max-time 1 "http://127.0.0.1:$port/ready" 2>/dev/null \
                 || true
             )"
             if [ -n "$ready_body" ]; then
@@ -201,7 +214,7 @@ pkgs.writeShellApplication {
                 }
 
               health_body="$(
-                curl --fail --silent --show-error --max-time 1 http://127.0.0.1:8080/health
+                curl --fail --silent --show-error --max-time 1 "http://127.0.0.1:$port/health"
               )"
               if [ "$health_body" != "ok" ]; then
                 echo "linux-artifact-smoke: unexpected /health response from $label: $health_body" >&2
@@ -262,9 +275,11 @@ pkgs.writeShellApplication {
       test -f "$rpm"
       rpm_dir="$workdir/rpm"
       mkdir -p "$rpm_dir"
+      rpm_cpio="$workdir/rpm.cpio"
+      rpm2cpio "$rpm" > "$rpm_cpio"
       (
         cd "$rpm_dir"
-        rpm2cpio "$rpm" | cpio -idm >/dev/null
+        cpio -idm < "$rpm_cpio" >/dev/null
       )
       assert_bundled_store_refs "$rpm_dir" rpm
       bin="$(find_executable "$rpm_dir")"

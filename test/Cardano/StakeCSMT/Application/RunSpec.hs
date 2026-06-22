@@ -4,8 +4,10 @@ module Cardano.StakeCSMT.Application.RunSpec
 
 import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
+    , apiPortEnvironmentVariable
     , configApiPort
     , defaultConfig
+    , runtimeConfigFromEnvironmentValues
     )
 import Cardano.StakeCSMT.Application.Run.Main
     ( RuntimeApplications (..)
@@ -17,6 +19,9 @@ import Cardano.StakeCSMT.HTTP.Server
     )
 import Data.ByteString
     ( ByteString
+    )
+import Data.Either
+    ( isLeft
     )
 import Network.HTTP.Types
     ( methodGet
@@ -37,6 +42,7 @@ import Test.Hspec
     , describe
     , it
     , shouldBe
+    , shouldSatisfy
     )
 
 spec :: Spec
@@ -47,6 +53,24 @@ spec =
             configDocsPort defaultConfig `shouldBe` Nothing
             configStakeDbPath defaultConfig `shouldBe` Nothing
             configHistoryDbPath defaultConfig `shouldBe` Nothing
+
+        it "keeps the default API port when the environment is absent"
+            $ runtimeConfigFromEnvironmentValues []
+            `shouldBe` Right defaultConfig
+
+        it "overrides the API port from the environment"
+            $ runtimeConfigFromEnvironmentValues
+                [(apiPortEnvironmentVariable, "18080")]
+            `shouldBe` Right defaultConfig{configPort = 18080}
+
+        it "rejects invalid API port environment values"
+            $ mapM_
+                ( \rawApiPort ->
+                    runtimeConfigFromEnvironmentValues
+                        [(apiPortEnvironmentVariable, rawApiPort)]
+                        `shouldSatisfy` isLeft
+                )
+                ["", "abc", "0", "65536", "-1"]
 
         it "uses the unavailable query backend when DB paths are absent"
             $ withRuntimeHandlers defaultConfig

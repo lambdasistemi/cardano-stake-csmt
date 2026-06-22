@@ -22,7 +22,7 @@ import Cardano.Crypto.DSIGN.Ed25519
 import Cardano.StakeCSMT.Application.Run.Config
     ( RuntimeConfig (..)
     , configApiPort
-    , defaultConfig
+    , runtimeConfigFromEnvironment
     )
 import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
 import Cardano.StakeCSMT.CSMT.RocksDB
@@ -72,7 +72,8 @@ data RuntimeApplications = RuntimeApplications
     }
 
 main :: IO ()
-main = run defaultConfig
+main =
+    runtimeConfigFromEnvironment >>= run
 
 run :: RuntimeConfig -> IO ()
 run config =
