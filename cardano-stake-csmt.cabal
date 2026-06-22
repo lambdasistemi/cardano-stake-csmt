@@ -127,13 +127,22 @@ library http
   default-language: Haskell2010
   exposed-modules:
     Cardano.StakeCSMT.HTTP.API
+    Cardano.StakeCSMT.HTTP.Base16
     Cardano.StakeCSMT.HTTP.Server
 
   build-depends:
+    , aeson
     , base                       <5
+    , base16-bytestring
     , bytestring
+    , cardano-ledger-core
+    , cardano-slotting
     , cardano-stake-csmt:library
     , http-types
+    , lens
+    , mts:csmt
+    , servant-server
+    , swagger2
     , text
     , wai
     , warp
@@ -171,6 +180,8 @@ test-suite unit-tests
     Cardano.StakeCSMT.CSMT.BuilderSpec
     Cardano.StakeCSMT.CSMT.CodecsSpec
     Cardano.StakeCSMT.CSMT.RocksDBSpec
+    Cardano.StakeCSMT.HTTP.APISpec
+    Cardano.StakeCSMT.HTTP.Base16Spec
     Cardano.StakeCSMT.History.BuilderSpec
     Cardano.StakeCSMT.History.CodecsSpec
     Cardano.StakeCSMT.History.RocksDBSpec
@@ -181,6 +192,7 @@ test-suite unit-tests
     Cardano.StakeCSMT.Ledger.StakeSnapshotSpec
 
   build-depends:
+    , aeson
     , base                       <5
     , bytestring
     , cardano-crypto-class
@@ -194,9 +206,11 @@ test-suite unit-tests
     , hspec
     , http-types
     , lens
+    , mts:csmt
     , ouroboros-network:api
     , rocksdb-kv-transactions:kv-transactions
     , temporary
+    , text
 
 test-suite e2e-tests
   import:           warnings

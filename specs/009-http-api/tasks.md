@@ -2,11 +2,11 @@
 
 ## Slice 1 - Servant API Types And Wire Codecs
 
-- [ ] T001-S1 Add `Cardano.StakeCSMT.HTTP.Base16` and replace the scaffold route model with servant API types in `Cardano.StakeCSMT.HTTP.API`.
-- [ ] T002-S1 Add JSON and Swagger schema instances for proof, root, history-root, ready, metrics, and latest-header response types.
-- [ ] T003-S1 Add credential/base16/hash/proof rendering helpers using the existing CSMT and ledger codecs.
-- [ ] T004-S1 Register servant/swagger/base16 dependencies, modules, and focused API/codecs tests in `cardano-stake-csmt.cabal` and `test/main.hs`.
-- [ ] T005-S1 Run the focused HTTP API/codecs test and `./gate.sh`, then commit as `feat(http): define stake proof API`.
+- [x] T001-S1 Add `Cardano.StakeCSMT.HTTP.Base16` and replace the scaffold route model with servant API types in `Cardano.StakeCSMT.HTTP.API`.
+- [x] T002-S1 Add JSON and Swagger schema instances for proof, root, history-root, ready, metrics, and latest-header response types.
+- [x] T003-S1 Add credential/base16/hash/proof rendering helpers using the existing CSMT and ledger codecs.
+- [x] T004-S1 Register servant/swagger/base16 dependencies, modules, and focused API/codecs tests in `cardano-stake-csmt.cabal` and `test/main.hs`.
+- [x] T005-S1 Run the focused HTTP API/codecs test and `./gate.sh`, then commit as `feat(http): define stake proof API`.
 
 ## Slice 2 - Query Layer And Proof Handlers
 

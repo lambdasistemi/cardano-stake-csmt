@@ -6,6 +6,8 @@ import Cardano.StakeCSMT.Application.HealthSpec qualified as HealthSpec
 import Cardano.StakeCSMT.CSMT.BuilderSpec qualified as CSMTBuilderSpec
 import Cardano.StakeCSMT.CSMT.CodecsSpec qualified as CSMTCodecsSpec
 import Cardano.StakeCSMT.CSMT.RocksDBSpec qualified as CSMTRocksDBSpec
+import Cardano.StakeCSMT.HTTP.APISpec qualified as APISpec
+import Cardano.StakeCSMT.HTTP.Base16Spec qualified as Base16Spec
 import Cardano.StakeCSMT.HTTP.ServerSpec qualified as ServerSpec
 import Cardano.StakeCSMT.History.BuilderSpec qualified as HistoryBuilderSpec
 import Cardano.StakeCSMT.History.CodecsSpec qualified as HistoryCodecsSpec
@@ -22,6 +24,8 @@ main = hspec $ do
     CSMTBuilderSpec.spec
     CSMTCodecsSpec.spec
     CSMTRocksDBSpec.spec
+    APISpec.spec
+    Base16Spec.spec
     HistoryBuilderSpec.spec
     HistoryCodecsSpec.spec
     HistoryRocksDBSpec.spec
