@@ -1,10 +1,16 @@
 site_name: Cardano Stake CSMT
-site_description: Stake distribution service scaffold for Cardano CSMT roots and proofs.
+site_url: https://lambdasistemi.github.io/cardano-stake-csmt/
+site_description: Cardano stake distribution service for per-epoch CSMT roots and proofs.
 repo_url: https://github.com/lambdasistemi/cardano-stake-csmt
 strict: true
 
 theme:
   name: material
+  features:
+    - navigation.indexes
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
   palette:
     - scheme: default
       primary: teal
@@ -23,8 +29,13 @@ nav:
   - Home: index.md
   - Getting started: getting-started.md
   - Architecture: architecture.md
+  - API and proofs: api-proofs.md
+
+plugins:
+  - search
 
 markdown_extensions:
   - admonition
+  - tables
   - toc:
       permalink: true

@@ -2,10 +2,10 @@
 
 ## Slice 1 - Documentation And Pages Workflow
 
-- [ ] T001-S1 Update `mkdocs.yml` navigation and Material settings for architecture plus API/proof documentation.
-- [ ] T002-S1 Replace scaffold docs with the completed stake CSMT architecture, including replay, snapshots, CSMTs, history roots, rollback, HTTP proofs, signed latest headers, and voting-proof use case.
-- [ ] T003-S1 Add API/proof documentation for endpoints, proof response shape, two-level verification, latest signed-header verification, and `totalStake` threshold checks.
-- [ ] T004-S1 Update `deploy-docs.yml` so pull requests run `mkdocs build --strict`, `main` deploys through Pages workflow mode, run the focused docs build and `./gate.sh`, then commit as `docs: document stake proof architecture and API`.
+- [X] T001-S1 Update `mkdocs.yml` navigation and Material settings for architecture plus API/proof documentation.
+- [X] T002-S1 Replace scaffold docs with the completed stake CSMT architecture, including replay, snapshots, CSMTs, history roots, rollback, HTTP proofs, signed latest headers, and voting-proof use case.
+- [X] T003-S1 Add API/proof documentation for endpoints, proof response shape, two-level verification, latest signed-header verification, and `totalStake` threshold checks.
+- [X] T004-S1 Update `deploy-docs.yml` so pull requests run `mkdocs build --strict`, `main` deploys through Pages workflow mode, run the focused docs build and `./gate.sh`, then commit as `docs: document stake proof architecture and API`.
 
 ## Slice 2 - Cabal-Owned Release Pipeline And Artifacts
 
