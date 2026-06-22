@@ -16,12 +16,12 @@
 
 ## Slice 2b - Replay Rollback Integration
 
-- [ ] T009-S2B Extend `Cardano.StakeCSMT.Ledger.Replay` with checkpoint-aware follower configuration while preserving the existing runner API.
-- [ ] T010-S2B On roll-forward, save checkpoints at the configured cadence and retain fetched blocks in the checkpoint replay tail.
-- [ ] T011-S2B On reachable non-origin rollback, re-derive from the finalized-boundary checkpoint plus tail, truncate volatile tail state, and continue with `Progress`.
-- [ ] T012-S2B On unreachable non-origin rollback, return `Reset intersector` rather than fabricating ledger state.
-- [ ] T013-S2B Add replay unit tests for reachable rollback, unreachable rollback, origin rollback, and post-rollback continuation.
-- [ ] T014-S2B Run `./gate.sh` and commit as `feat(ledger): rewind replay state on rollback`.
+- [X] T009-S2B Extend `Cardano.StakeCSMT.Ledger.Replay` with checkpoint-aware follower configuration while preserving the existing runner API.
+- [X] T010-S2B On roll-forward, save checkpoints at the configured cadence and retain fetched blocks in the checkpoint replay tail.
+- [X] T011-S2B On reachable non-origin rollback, re-derive from the finalized-boundary checkpoint plus tail, truncate volatile tail state, and continue with `Progress`.
+- [X] T012-S2B On unreachable non-origin rollback, return `Reset intersector` rather than fabricating ledger state.
+- [X] T013-S2B Add replay unit tests for reachable rollback, unreachable rollback, origin rollback, and post-rollback continuation.
+- [X] T014-S2B Run `./gate.sh` and commit as `feat(ledger): rewind replay state on rollback`.
 
 ## Slice 3 - E2E Rollback Recovery Proof
 
