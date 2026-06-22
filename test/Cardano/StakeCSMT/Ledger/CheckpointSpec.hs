@@ -148,6 +148,46 @@ spec =
                 (recoverReplayTail (CheckpointAtBlock 2) (CheckpointAtBlock 5) tail4)
                 `shouldBe` Nothing
 
+        it
+            "rejects recovery when the boundary predates the oldest retained block"
+            $ do
+                let tail0 = emptyReplayTail
+                    tail1 =
+                        appendReplayTailAt
+                            3
+                            (CheckpointAtBlock 1)
+                            (fetchedWithTip 1)
+                            tail0
+                    tail2 =
+                        appendReplayTailAt
+                            3
+                            (CheckpointAtBlock 2)
+                            (fetchedWithTip 2)
+                            tail1
+                    tail3 =
+                        appendReplayTailAt
+                            3
+                            (CheckpointAtBlock 3)
+                            (fetchedWithTip 3)
+                            tail2
+                    tail4 =
+                        appendReplayTailAt
+                            3
+                            (CheckpointAtBlock 4)
+                            (fetchedWithTip 4)
+                            tail3
+
+                tailTips tail4 `shouldBe` [SlotNo 2, SlotNo 3, SlotNo 4]
+                recoverTips
+                    (recoverReplayTail (CheckpointAtBlock 1) (CheckpointAtBlock 1) tail4)
+                    `shouldBe` Just []
+                recoverTips
+                    (recoverReplayTail (CheckpointAtBlock 1) (CheckpointAtBlock 4) tail4)
+                    `shouldBe` Nothing
+                recoverTips
+                    (recoverReplayTail CheckpointOrigin (CheckpointAtBlock 4) tail4)
+                    `shouldBe` Nothing
+
 fetchedWithTip :: Word64 -> Fetched
 fetchedWithTip slot =
     Fetched

@@ -140,6 +140,10 @@ recoverReplayTail
 recoverReplayTail boundary target ReplayTail{replayTailEntries}
     | target < boundary =
         Nothing
+    | target == boundary =
+        Just []
+    | boundary < oldestRetainedPoint replayTailEntries =
+        Nothing
     | otherwise =
         let required =
                 takeWhile
@@ -150,6 +154,14 @@ recoverReplayTail boundary target ReplayTail{replayTailEntries}
         in  if replayTailCovers boundary required target
                 then Just $ replayTailEntryFetched <$> required
                 else Nothing
+
+oldestRetainedPoint :: [ReplayTailEntry] -> CheckpointPoint
+oldestRetainedPoint entries =
+    case entries of
+        [] ->
+            CheckpointOrigin
+        entry : _ ->
+            replayTailEntryPoint entry
 
 -- | Convert a chain-sync point into checkpoint ordering metadata.
 checkpointPointFromHeaderPoint :: HeaderPoint -> CheckpointPoint
