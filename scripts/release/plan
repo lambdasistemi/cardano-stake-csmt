@@ -9,11 +9,6 @@ base_branch="${BASE_BRANCH:-main}"
 release_branch="${RELEASE_BRANCH:-release/cabal-release}"
 dry_run="${RELEASE_PLAN_DRY_RUN:-0}"
 
-if [[ -n "${GITHUB_ACTIONS:-}" && "${RELEASE_BOT_SSH_KEY_SET:-true}" != "true" ]]; then
-  echo "::error::Configure RELEASE_BOT_SSH_KEY so release PR and tag pushes are made by the deploy key."
-  exit 1
-fi
-
 current_version="$(scripts/release/get-cabal-version)"
 current_tag="v$current_version"
 

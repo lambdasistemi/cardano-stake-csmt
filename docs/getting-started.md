@@ -95,10 +95,11 @@ RELEASE_PLAN_DRY_RUN=1 scripts/release/plan
 The non-dry-run planner is intended for the `Release Planner` workflow
 on `main`. It creates or updates `release/cabal-release` with the next
 Cabal version and changelog notes, or creates `v<version>` after the
-Cabal version and changelog already match. Operators must configure
-`RELEASE_BOT_SSH_KEY`; Darwin/Homebrew publication also needs
-`TAP_TOKEN`, and `CACHIX_AUTH_TOKEN` enables cache pushes from release
-builds.
+Cabal version and changelog already match. Planner git writes use a
+scoped token minted from the org `lambdasistemi-ci` GitHub App
+(`CI_APP_ID` + `CI_APP_PRIVATE_KEY`), so no deploy key needs to be set
+on the repo. Darwin/Homebrew publication also needs `TAP_TOKEN`, and
+`CACHIX_AUTH_TOKEN` enables cache pushes from release builds.
 
 ## Documentation
 

@@ -48,10 +48,11 @@ version and generated `CHANGELOG.md` notes. After that PR merges, the
 next main-branch planner run creates `v<version>` when the Cabal file
 and changelog already match.
 
-Repository operators must configure `RELEASE_BOT_SSH_KEY` for planner
-branch and tag pushes. Darwin/Homebrew publication also needs
-`TAP_TOKEN`; `CACHIX_AUTH_TOKEN` lets macOS release builds populate the
-shared cache.
+Planner branch and tag pushes are made with a scoped token minted from
+the org `lambdasistemi-ci` GitHub App (`CI_APP_ID` variable +
+`CI_APP_PRIVATE_KEY` secret), so no per-repo deploy key is required.
+Darwin/Homebrew publication still needs `TAP_TOKEN`;
+`CACHIX_AUTH_TOKEN` lets macOS release builds populate the shared cache.
 
 ## License
 
