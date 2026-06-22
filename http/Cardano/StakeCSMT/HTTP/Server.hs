@@ -6,18 +6,37 @@ module Cardano.StakeCSMT.HTTP.Server
     ( application
     , apiApp
     , apiServer
+    , QueryHandlers (..)
     , responseForPath
     , runHttpServer
     ) where
 
+import Cardano.Ledger.Credential
+    ( Credential
+    )
+import Cardano.Ledger.Keys
+    ( KeyRole (Staking)
+    )
+import Cardano.Slotting.Slot
+    ( EpochNo (EpochNo)
+    )
 import Cardano.StakeCSMT.Application.Health
     ( healthStatus
     )
 import Cardano.StakeCSMT.HTTP.API
     ( API
+    , HistoryRootResponse
     , MetricsResponse (..)
     , ReadyResponse (..)
+    , StakeProofResponse
+    , StakeRootResponse
     , api
+    , parseCredentialBase16
+    )
+import Control.Exception
+    ( Exception
+    , throwIO
+    , try
     )
 import Control.Monad.IO.Class
     ( liftIO
@@ -28,7 +47,8 @@ import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.ByteString.Lazy qualified as ByteString.Lazy
 import Data.Text (Text)
-import Data.Text.Encoding qualified as Text
+import Data.Text qualified as Text
+import Data.Text.Encoding qualified as Text.Encoding
 import Network.HTTP.Types
     ( Status
     , status200
@@ -41,23 +61,35 @@ import Network.Wai.Handler.Warp qualified as Warp
 import Servant
     ( Handler
     , Server
-    , ServerError (..)
+    , err400
+    , err404
+    , err503
     , errBody
     , serve
     , throwError
     , (:<|>) (..)
     )
 
+data QueryHandlers = QueryHandlers
+    { queryLatestProof
+        :: Credential Staking -> IO (Maybe StakeProofResponse)
+    , queryHistoricalProof
+        :: EpochNo -> Credential Staking -> IO (Maybe StakeProofResponse)
+    , queryEpochRoots :: IO [StakeRootResponse]
+    , queryHistoryRoot :: IO (Maybe HistoryRootResponse)
+    , queryReady :: IO ReadyResponse
+    }
+
 application :: Application
 application =
-    apiApp (pure $ ReadyResponse True)
+    apiApp unavailableHandlers
 
-apiApp :: IO ReadyResponse -> Application
-apiApp getReady =
-    serve api $ apiServer getReady
+apiApp :: QueryHandlers -> Application
+apiApp handlers =
+    serve api $ apiServer handlers
 
-apiServer :: IO ReadyResponse -> Server API
-apiServer getReady =
+apiServer :: QueryHandlers -> Server API
+apiServer QueryHandlers{..} =
     pure healthStatus
         :<|> latestProofHandler
         :<|> historicalProofHandler
@@ -68,33 +100,60 @@ apiServer getReady =
   where
     readyHandler :: Handler ReadyResponse
     readyHandler =
-        liftIO getReady
+        liftIO queryReady
 
     metricsHandler :: Handler MetricsResponse
     metricsHandler = do
-        ReadyResponse{ready} <- liftIO getReady
+        ReadyResponse{ready} <- liftIO queryReady
         pure MetricsResponse{ready, latestEpoch = Nothing}
 
-    latestProofHandler _credential =
-        throwError notImplemented
+    latestProofHandler credentialText =
+        withCredential credentialText $ \credential -> do
+            mProof <- runQuery $ queryLatestProof credential
+            maybe (throwError err404) pure mProof
 
-    historicalProofHandler _epoch _credential =
-        throwError notImplemented
+    historicalProofHandler epoch credentialText =
+        withCredential credentialText $ \credential -> do
+            mProof <-
+                runQuery
+                    $ queryHistoricalProof
+                        (EpochNo $ fromIntegral epoch)
+                        credential
+            maybe (throwError err404) pure mProof
 
     rootsHandler =
-        throwError notImplemented
+        runQuery queryEpochRoots
 
     historyRootHandler =
-        throwError notImplemented
+        runQuery queryHistoryRoot >>= maybe (throwError err404) pure
 
-    notImplemented :: ServerError
-    notImplemented =
-        ServerError
-            { errHTTPCode = 501
-            , errReasonPhrase = "Not Implemented"
-            , errBody = "stake proof queries are implemented in a later slice"
-            , errHeaders = []
-            }
+withCredential
+    :: Text
+    -> (Credential Staking -> Handler a)
+    -> Handler a
+withCredential credentialText action =
+    case parseCredentialBase16 credentialText of
+        Left err ->
+            throwError
+                err400
+                    { errBody =
+                        ByteString.Lazy.fromStrict
+                            $ Text.Encoding.encodeUtf8
+                            $ "invalid credential: " <> Text.pack err
+                    }
+        Right credential -> action credential
+
+runQuery :: IO a -> Handler a
+runQuery action = do
+    result <- liftIO $ try action
+    case result of
+        Left QueryBackendUnavailable ->
+            throwError
+                err503
+                    { errBody =
+                        "stake proof query backend is not configured"
+                    }
+        Right value -> pure value
 
 {- | Direct response helper retained for focused scaffold tests.
 
@@ -112,4 +171,23 @@ runHttpServer port = Warp.run port application
 
 statusBody :: Text -> ByteString
 statusBody =
-    ByteString.Lazy.fromStrict . Text.encodeUtf8 . (<> "\n")
+    ByteString.Lazy.fromStrict . Text.Encoding.encodeUtf8 . (<> "\n")
+
+data QueryBackendUnavailable = QueryBackendUnavailable
+    deriving stock (Show)
+
+instance Exception QueryBackendUnavailable
+
+unavailableHandlers :: QueryHandlers
+unavailableHandlers =
+    QueryHandlers
+        { queryLatestProof = const unavailable
+        , queryHistoricalProof = \_ _ -> unavailable
+        , queryEpochRoots = unavailable
+        , queryHistoryRoot = unavailable
+        , queryReady = pure ReadyResponse{ready = True}
+        }
+
+unavailable :: IO a
+unavailable =
+    throwIO QueryBackendUnavailable

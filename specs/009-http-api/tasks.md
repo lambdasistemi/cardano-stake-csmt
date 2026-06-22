@@ -10,10 +10,10 @@
 
 ## Slice 2 - Query Layer And Proof Handlers
 
-- [ ] T006-S2 Add `Cardano.StakeCSMT.HTTP.Query` functions for historical proof, latest proof, epoch roots, and history root using only #6/#7 public APIs and typed KV cursor iteration.
-- [ ] T007-S2 Replace scaffold WAI routing with servant handlers in `Cardano.StakeCSMT.HTTP.Server`, preserving dependency injection for tests.
-- [ ] T008-S2 Add tests proving proof bytes verify with `CSMT.Hashes.verifyInclusionProof`, latest proof chooses the newest epoch, invalid credential returns 400, and missing root/proof returns 404.
-- [ ] T009-S2 Run the focused HTTP server/query test and `./gate.sh`, then commit as `feat(http): serve stake proof queries`.
+- [x] T006-S2 Add `Cardano.StakeCSMT.HTTP.Query` functions for historical proof, latest proof, epoch roots, and history root using only #6/#7 public APIs and typed KV cursor iteration.
+- [x] T007-S2 Replace scaffold WAI routing with servant handlers in `Cardano.StakeCSMT.HTTP.Server`, preserving dependency injection for tests.
+- [x] T008-S2 Add tests proving proof bytes verify with `CSMT.Hashes.verifyInclusionProof`, latest proof chooses the newest epoch, invalid credential returns 400, and missing root/proof returns 404.
+- [x] T009-S2 Run the focused HTTP server/query test and `./gate.sh`, then commit as `feat(http): serve stake proof queries`.
 
 ## Slice 3 - Swagger, Readiness, Metrics, And Application Wiring
 
