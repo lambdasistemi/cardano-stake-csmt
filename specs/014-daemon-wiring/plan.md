@@ -5,29 +5,40 @@
 - Language/tooling: Haskell, Cabal, Hspec, Fourmolu, Nix flakes with
   `compiler-nix-name = "ghc9123"`.
 - Config surface from #23 is already merged in
-  `Cardano.StakeCSMT.Application.Run.Config` and `.CLI`.
+  `Cardano.StakeCSMT.Application.Run.Config` and `.CLI`; #25 is allowed to
+  collapse the two store paths into one pre-1.0 daemon store path.
 - Indexer engine from #24 is already merged in
-  `Cardano.StakeCSMT.Indexer`.
+  `Cardano.StakeCSMT.Indexer`; #25 may refactor the storage boundary needed to
+  make one epoch write atomic, but must not change proof/query semantics.
 - Existing HTTP handlers already read stake/history `Database` handles. #25
-  wires those handles to the live daemon lifecycle and readiness.
+  wires those handles to one live store instance, the daemon lifecycle, and
+  readiness.
 
 ## Design
 
 `run` remains the production entry point. It will:
 
-1. Open stake and history RocksDB once using the paths from `RuntimeConfig`.
-2. Load `LedgerConfigBundle` from `configLedgerConfigDir`.
-3. Build `ReplayFollowerConfig` from the node socket, network magic, and
+1. Open one RocksDB instance from the daemon store path in `RuntimeConfig`.
+2. Expose typed stake CSMT and history column-family handles over that one
+   instance.
+3. Load `LedgerConfigBundle` from `configLedgerConfigDir`.
+4. Build `ReplayFollowerConfig` from the node socket, network magic, and
    Byron epoch slots.
-4. Build a `ReplayCheckpointConfig` from runtime settings with conservative
+5. Build a `ReplayCheckpointConfig` from runtime settings with conservative
    behavior that does not modify #24 replay/indexer internals.
-5. Create an `IORef Bool` or equivalent readiness signal initialized to
+6. Create an `IORef Bool` or equivalent readiness signal initialized to
    `False`.
-6. Build `QueryHandlers` over the same `Database` handles and the readiness
+7. Build `QueryHandlers` over the same typed store handles and the readiness
    action.
-7. Start the indexer in a background thread and propagate any indexer failure
+8. Start the indexer in a background thread and propagate any indexer failure
    back to the foreground daemon thread.
-8. Serve HTTP over the same handlers.
+9. Serve HTTP over the same handlers.
+
+`indexStakeSnapshot` must no longer perform two independent commits. It should
+build the epoch stake CSMT and finalize the matching history root in one
+transaction over the unified RocksDB instance. RocksDB batch/transaction
+atomicity is per instance, so a two-instance design cannot satisfy the failure
+atomicity requirement.
 
 The #24 `withIndexer` helper currently starts a plain `forkIO` thread. If that
 shape cannot make indexer death fail the daemon from `Run.Main`, #25 should use
@@ -57,28 +68,34 @@ nix develop --quiet -c just unit "Application.Run"
 ./gate.sh
 ```
 
-### Slice 2 - Daemon Indexer Lifecycle
+### Slice 2 - Atomic Epoch Write
 
-Build ledger/replay/checkpoint config from `RuntimeConfig`, open stake/history
-RocksDB once, run the indexer in a linked background thread, and serve HTTP in
-the foreground over the same handles. Add an injected/controlled runner test
-that writes one epoch into the shared stores, flips readiness through the hook,
-and proves an existing query returns real data after indexing. Add an
-indexer-death test for failure propagation.
+Unify the stake CSMT and history RocksDB opening path so both typed stores live
+under one physical RocksDB instance and one transaction context. Collapse
+`RuntimeConfig` and the CLI from `configStakeDbPath` plus `configHistoryDbPath`
+to one store path and one `--db` flag. Refactor `indexStakeSnapshot` so
+`buildEpochCSMT epoch snapshot` and `finalizeEpochRoot epoch root` commit in
+one transaction. Add focused coverage proving the epoch write is atomic,
+preferably with a failure-injection path that cannot leave an epoch CSMT root
+without its history finalization.
 
 Focused gate:
 
 ```bash
+nix develop --quiet -c just unit "Indexer"
 nix develop --quiet -c just unit "Application.Run"
 ./gate.sh
 ```
 
-### Slice 3 - Concurrent Shared Store Regression
+### Slice 3 - Daemon Indexer Lifecycle
 
-Add a focused unit regression that opens real RocksDB stake/history handles,
-performs indexer-style writes while query handlers read the same handles, and
-asserts no exceptions, corruption, or torn-read symptoms. Keep the test scoped
-to in-process shared handles, not the live devnet HTTP E2E owned by #26.
+Build ledger/replay/checkpoint config from `RuntimeConfig`, open the unified
+store once, run the indexer in a linked background thread, and serve HTTP in
+the foreground over the same store handles. Add an injected/controlled runner
+test that writes one epoch into the shared store, flips readiness through the
+hook, and proves an existing query returns real data after indexing. Add an
+indexer-death test for failure propagation and a real RocksDB shared-handle
+read/write regression for concurrent indexer writes plus HTTP reads.
 
 Focused gate:
 
@@ -98,8 +115,8 @@ head SHA.
 
 - Slice 1: `nix develop --quiet -c just unit "Application.Run"` and
   `./gate.sh`.
-- Slice 2: `nix develop --quiet -c just unit "Application.Run"` and
-  `./gate.sh`.
+- Slice 2: `nix develop --quiet -c just unit "Indexer"`,
+  `nix develop --quiet -c just unit "Application.Run"`, and `./gate.sh`.
 - Slice 3: `nix develop --quiet -c just unit "Application.Run"` and
   `./gate.sh`.
 - Completion: `just ci` and `nix build .#default`. Run
@@ -113,5 +130,7 @@ head SHA.
 - `withIndexer` does not visibly link the child thread to the daemon thread.
   If used unchanged, indexer death would not fail the process; the plan routes
   lifecycle supervision through `Run.Main`.
-- The concurrency regression must exercise actual shared RocksDB handles, not
-  only in-memory `Database` handles.
+- The atomicity regression must prove one transaction boundary, not merely that
+  two sequential writes usually both succeed.
+- The concurrency regression must exercise actual shared unified RocksDB
+  handles, not only in-memory `Database` handles.
