@@ -6,7 +6,9 @@ Runs the scaffold HTTP server with static health and readiness routes.
 -}
 module Cardano.StakeCSMT.Application.Run.Main
     ( RuntimeApplications (..)
+    , RuntimeIndexerAction
     , RuntimeReadinessSignal
+    , RuntimeStoreDatabase
     , applications
     , main
     , markRuntimeReady
@@ -14,6 +16,7 @@ module Cardano.StakeCSMT.Application.Run.Main
     , run
     , runWithHandlers
     , withRuntimeHandlers
+    , withRuntimeHandlersUsingIndexer
     , withRuntimeHandlersUsingReadiness
     ) where
 
@@ -43,16 +46,36 @@ import Cardano.StakeCSMT.HTTP.Server
     , runDocsServer
     )
 import Cardano.StakeCSMT.History.Columns qualified as History
-import Cardano.StakeCSMT.Store.Columns
-    ( historyDatabase
-    , stakeDatabase
+import Cardano.StakeCSMT.Indexer
+    ( EpochBoundaryHook
+    , runIndexer
     )
+import Cardano.StakeCSMT.Ledger.Config
+    ( ledgerConfigPathsFromDirectory
+    , loadLedgerConfig
+    )
+import Cardano.StakeCSMT.Ledger.Replay
+    ( ReplayCheckpointConfig (..)
+    , ReplayFollowerConfig (..)
+    )
+import Cardano.StakeCSMT.Store.Columns qualified as Store
 import Cardano.StakeCSMT.Store.RocksDB
     ( mkStoreDatabase
     , withStoreRocksDB
     )
 import Control.Concurrent
-    ( forkIO
+    ( ThreadId
+    , forkFinally
+    , forkIO
+    , killThread
+    , myThreadId
+    , throwTo
+    )
+import Control.Exception
+    ( Exception
+    , SomeException
+    , finally
+    , try
     )
 import Control.Monad
     ( void
@@ -62,6 +85,9 @@ import Data.IORef
     , atomicWriteIORef
     , newIORef
     , readIORef
+    )
+import Data.Maybe
+    ( fromMaybe
     )
 import Database.KV.Database
     ( Database
@@ -76,13 +102,33 @@ import Database.RocksDB
 import Network.Wai
     ( Application
     )
+import Ouroboros.Network.Magic
+    ( NetworkMagic (..)
+    )
+import System.Directory
+    ( createDirectoryIfMissing
+    )
 
 data RuntimeApplications = RuntimeApplications
     { runtimeApiApp :: Application
     , runtimeDocsApp :: Maybe Application
     }
 
+type RuntimeStoreDatabase =
+    Database IO ColumnFamily Store.Columns BatchOp
+
+type RuntimeIndexerAction =
+    RuntimeStoreDatabase
+    -> EpochBoundaryHook
+    -> IO (Either SomeException ())
+
 newtype RuntimeReadinessSignal = RuntimeReadinessSignal (IORef Bool)
+
+data RuntimeIndexerTerminatedUnexpectedly
+    = RuntimeIndexerTerminatedUnexpectedly
+    deriving stock (Show)
+
+instance Exception RuntimeIndexerTerminatedUnexpectedly
 
 newRuntimeReadinessSignal :: IO RuntimeReadinessSignal
 newRuntimeReadinessSignal =
@@ -101,8 +147,26 @@ main =
     runtimeConfigFromCommandLine >>= run
 
 run :: RuntimeConfig -> IO ()
-run config =
-    withRuntimeHandlers config $ runWithHandlers config
+run config = do
+    readiness <- newRuntimeReadinessSignal
+    ledgerConfig <-
+        loadLedgerConfig
+            $ ledgerConfigPathsFromDirectory
+            $ configLedgerConfigDir config
+    checkpointConfig <- runtimeReplayCheckpointConfig config
+    let followerConfig = runtimeReplayFollowerConfig config
+        indexerAction storeDb hook =
+            runIndexer
+                ledgerConfig
+                storeDb
+                followerConfig
+                checkpointConfig
+                (Just hook)
+    withRuntimeHandlersUsingIndexer
+        readiness
+        config
+        indexerAction
+        $ runWithHandlers config
 
 runWithHandlers :: RuntimeConfig -> QueryHandlers -> IO ()
 runWithHandlers config handlers = do
@@ -138,6 +202,29 @@ withRuntimeHandlersUsingReadiness
     -> IO a
 withRuntimeHandlersUsingReadiness
     readiness
+    config
+    action =
+        withRuntimeStoreHandlers readiness config $ \_storeDb handlers ->
+            action handlers
+
+withRuntimeHandlersUsingIndexer
+    :: RuntimeReadinessSignal
+    -> RuntimeConfig
+    -> RuntimeIndexerAction
+    -> (QueryHandlers -> IO a)
+    -> IO a
+withRuntimeHandlersUsingIndexer readiness config indexerAction action =
+    withRuntimeStoreHandlers readiness config $ \storeDb handlers ->
+        withLinkedIndexer readiness storeDb indexerAction
+            $ action handlers
+
+withRuntimeStoreHandlers
+    :: RuntimeReadinessSignal
+    -> RuntimeConfig
+    -> (RuntimeStoreDatabase -> QueryHandlers -> IO a)
+    -> IO a
+withRuntimeStoreHandlers
+    readiness
     RuntimeConfig
         { configDbPath
         , configSigningKey
@@ -146,11 +233,106 @@ withRuntimeHandlersUsingReadiness
         withStoreRocksDB configDbPath $ \rocksDB ->
             let storeDb = mkStoreDatabase rocksDB
             in  action
+                    storeDb
                     $ runtimeHandlers
                         readiness
-                        (stakeDatabase storeDb)
-                        (historyDatabase storeDb)
+                        (Store.stakeDatabase storeDb)
+                        (Store.historyDatabase storeDb)
                         configSigningKey
+
+withLinkedIndexer
+    :: RuntimeReadinessSignal
+    -> RuntimeStoreDatabase
+    -> RuntimeIndexerAction
+    -> IO a
+    -> IO a
+withLinkedIndexer readiness storeDb indexerAction action = do
+    foreground <- myThreadId
+    stopping <- newIORef False
+    indexerThread <-
+        forkFinally
+            ( normaliseIndexerResult
+                $ indexerAction storeDb
+                $ markReadyAfterIndexedEpoch readiness
+            )
+            (propagateIndexerExit stopping foreground)
+    action
+        `finally` do
+            atomicWriteIORef stopping True
+            killThread indexerThread
+
+markReadyAfterIndexedEpoch
+    :: RuntimeReadinessSignal -> EpochBoundaryHook
+markReadyAfterIndexedEpoch readiness _transition = \case
+    Nothing ->
+        pure ()
+    Just _indexed ->
+        markRuntimeReady readiness
+
+normaliseIndexerResult
+    :: IO (Either SomeException ())
+    -> IO (Either SomeException ())
+normaliseIndexerResult action = do
+    result <-
+        try action
+            :: IO (Either SomeException (Either SomeException ()))
+    pure $ case result of
+        Left exception ->
+            Left exception
+        Right indexerResult ->
+            indexerResult
+
+propagateIndexerExit
+    :: IORef Bool
+    -> ThreadId
+    -> Either SomeException (Either SomeException ())
+    -> IO ()
+propagateIndexerExit stopping foreground result = do
+    stoppingNow <- readIORef stopping
+    case result of
+        Left exception ->
+            propagateFailure stoppingNow exception
+        Right (Left exception) ->
+            propagateFailure stoppingNow exception
+        Right (Right ()) ->
+            if stoppingNow
+                then pure ()
+                else throwTo foreground RuntimeIndexerTerminatedUnexpectedly
+  where
+    propagateFailure stoppingNow exception =
+        if stoppingNow
+            then pure ()
+            else throwTo foreground exception
+
+runtimeReplayFollowerConfig :: RuntimeConfig -> ReplayFollowerConfig
+runtimeReplayFollowerConfig RuntimeConfig{..} =
+    ReplayFollowerConfig
+        { replayFollowerSocketPath = configNodeSocketPath
+        , replayFollowerNetworkMagic = NetworkMagic configNetworkMagic
+        , replayFollowerByronEpochSlots = configByronEpochSlots
+        }
+
+runtimeReplayCheckpointConfig
+    :: RuntimeConfig -> IO ReplayCheckpointConfig
+runtimeReplayCheckpointConfig RuntimeConfig{..} = do
+    createDirectoryIfMissing True checkpointDirectory
+    -- ReplayState serialization is not exposed; metadata checkpoints are
+    -- still persisted, while state recovery deterministically falls back to
+    -- replay reset.
+    pure
+        ReplayCheckpointConfig
+            { replayCheckpointDirectory = checkpointDirectory
+            , replayCheckpointTailLimit =
+                fromIntegral $ min configByronEpochSlots 21_600
+            , replayCheckpointCadence = configByronEpochSlots
+            , replayCheckpointSaveState = \_checkpoint _state -> pure ()
+            , replayCheckpointLoadState = \_checkpoint -> pure Nothing
+            }
+  where
+    checkpointDirectory =
+        fromMaybe
+            (configDbPath <> "-checkpoints")
+            configCheckpointDir
 
 runtimeHandlers
     :: RuntimeReadinessSignal

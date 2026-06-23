@@ -177,6 +177,7 @@ library application
     , cardano-stake-csmt:http
     , cardano-stake-csmt:library
     , directory
+    , ouroboros-network:api
     , rocksdb-haskell-jprupp
     , rocksdb-kv-transactions:kv-transactions
     , wai
