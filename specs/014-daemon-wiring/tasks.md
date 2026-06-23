@@ -12,39 +12,50 @@
   `./gate.sh`, then commit as
   `feat(app): add daemon readiness signal`.
 
-## Slice 2 - Daemon Indexer Lifecycle
+## Slice 2 - Atomic Epoch Write
 
-- [ ] T004-S2 Extend `application/Cardano/StakeCSMT/Application/Run/Main.hs`
-  to build ledger/replay/checkpoint config from `RuntimeConfig`, open
-  stake/history RocksDB once, start the indexer with linked failure
-  propagation, and serve HTTP over the same handles.
-- [ ] T005-S2 Add controlled lifecycle tests in
+- [ ] T004-S2 Unify stake CSMT and history RocksDB opening so both typed
+  stores live under one physical RocksDB instance and one transaction context.
+- [ ] T005-S2 Collapse daemon config and CLI from `configStakeDbPath` plus
+  `configHistoryDbPath` to one store path such as `configDbPath`, with one
+  `--db` flag and fail-closed validation/environment fallback.
+- [ ] T006-S2 Refactor `indexStakeSnapshot` so `buildEpochCSMT epoch snapshot`
+  and `finalizeEpochRoot epoch root` commit in one transaction over the unified
+  store.
+- [ ] T007-S2 Add focused atomicity coverage proving an epoch CSMT build and
+  history-root finalization are one write unit, ideally with failure injection
+  showing no epoch root is visible without its history finalization.
+- [ ] T008-S2 Run `nix develop --quiet -c just unit "Indexer"`,
+  `nix develop --quiet -c just unit "Application.Run"`, and `./gate.sh`, then
+  commit as `feat(indexer): make epoch writes atomic`.
+
+## Slice 3 - Daemon Indexer Lifecycle
+
+- [ ] T009-S3 Extend `application/Cardano/StakeCSMT/Application/Run/Main.hs`
+  to build ledger/replay/checkpoint config from `RuntimeConfig`, open the
+  unified store once, start the indexer with linked failure propagation, and
+  serve HTTP over the same handles.
+- [ ] T010-S3 Add controlled lifecycle tests in
   `test/Cardano/StakeCSMT/Application/RunSpec.hs` proving readiness flips and
   an existing query returns real data after an injected indexer action writes
-  an epoch over the shared handles.
-- [ ] T006-S2 Add a focused indexer-death test proving the daemon lifecycle
+  an epoch over the shared handle.
+- [ ] T011-S3 Add a focused indexer-death test proving the daemon lifecycle
   fails closed when the background indexer fails.
-- [ ] T007-S2 Run `nix develop --quiet -c just unit "Application.Run"` and
+- [ ] T012-S3 Add a real RocksDB shared-handle read/write regression in
+  `test/Cardano/StakeCSMT/Application/RunSpec.hs` or the closest focused
+  existing spec, without changing proof semantics.
+- [ ] T013-S3 Run `nix develop --quiet -c just unit "Application.Run"` and
   `./gate.sh`, then commit as
   `feat(app): wire indexer into daemon runtime`.
 
-## Slice 3 - Concurrent Shared Store Regression
-
-- [ ] T008-S3 Add a real RocksDB shared-handle read/write regression in
-  `test/Cardano/StakeCSMT/Application/RunSpec.hs` or the closest focused
-  existing spec, without changing proof semantics.
-- [ ] T009-S3 Run `nix develop --quiet -c just unit "Application.Run"` and
-  `./gate.sh`, then commit as
-  `test(app): cover concurrent daemon store access`.
-
 ## Slice 4 - Finalization
 
-- [ ] T010-F Run `just ci` at HEAD.
-- [ ] T011-F Run `nix build .#default` at HEAD.
-- [ ] T012-F Run `nix build .#e2e-tests` at HEAD if this ticket changes or
+- [ ] T014-F Run `just ci` at HEAD.
+- [ ] T015-F Run `nix build .#default` at HEAD.
+- [ ] T016-F Run `nix build .#e2e-tests` at HEAD if this ticket changes or
   adds e2e coverage.
-- [ ] T013-F Update the draft PR body with delivered behavior and
+- [ ] T017-F Update the draft PR body with delivered behavior and
   verification evidence.
-- [ ] T014-F Drop `gate.sh` in
+- [ ] T018-F Drop `gate.sh` in
   `chore: drop gate.sh (ready for review)`, push, and report COMPLETE with
   PR URL and head SHA.
