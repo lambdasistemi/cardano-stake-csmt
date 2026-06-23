@@ -67,8 +67,7 @@ data RuntimeValues = RuntimeValues
     , valuesNetworkMagic :: Word32
     , valuesByronEpochSlots :: Word64
     , valuesLedgerConfigDir :: FilePath
-    , valuesStakeDbPath :: FilePath
-    , valuesHistoryDbPath :: FilePath
+    , valuesDbPath :: FilePath
     , valuesCheckpointDir :: Maybe FilePath
     , valuesSigningKeyPath :: Maybe FilePath
     , valuesPort :: Int
@@ -104,17 +103,11 @@ ledgerConfigDirOption =
         "--ledger-config-dir"
         "CARDANO_STAKE_CSMT_LEDGER_CONFIG_DIR"
 
-stakeDbOption :: Option
-stakeDbOption =
+dbOption :: Option
+dbOption =
     Option
-        "--stake-db"
-        "CARDANO_STAKE_CSMT_STAKE_DB"
-
-historyDbOption :: Option
-historyDbOption =
-    Option
-        "--history-db"
-        "CARDANO_STAKE_CSMT_HISTORY_DB"
+        "--db"
+        "CARDANO_STAKE_CSMT_DB"
 
 checkpointDirOption :: Option
 checkpointDirOption =
@@ -144,8 +137,7 @@ supportedOptions =
     , networkMagicOption
     , byronEpochSlotsOption
     , ledgerConfigDirOption
-    , stakeDbOption
-    , historyDbOption
+    , dbOption
     , checkpointDirOption
     , signingKeyOption
     , apiPortOption
@@ -191,8 +183,7 @@ parseRuntimeValues environment options = do
                 (Right 21_600)
                 (parsePositiveWord64 byronEpochSlotsOption)
     ledgerConfigDir <- requiredPath ledgerConfigDirOption
-    stakeDbPath <- requiredPath stakeDbOption
-    historyDbPath <- requiredPath historyDbOption
+    dbPath <- requiredPath dbOption
     checkpointDir <- optionalPath checkpointDirOption
     signingKeyPath <- optionalPath signingKeyOption
     port <-
@@ -209,8 +200,7 @@ parseRuntimeValues environment options = do
             , valuesNetworkMagic = networkMagic
             , valuesByronEpochSlots = byronEpochSlots
             , valuesLedgerConfigDir = ledgerConfigDir
-            , valuesStakeDbPath = stakeDbPath
-            , valuesHistoryDbPath = historyDbPath
+            , valuesDbPath = dbPath
             , valuesCheckpointDir = checkpointDir
             , valuesSigningKeyPath = signingKeyPath
             , valuesPort = port
@@ -271,8 +261,7 @@ validateRuntimeValues values = do
                 , configNetworkMagic = valuesNetworkMagic values
                 , configByronEpochSlots = valuesByronEpochSlots values
                 , configLedgerConfigDir = valuesLedgerConfigDir values
-                , configStakeDbPath = valuesStakeDbPath values
-                , configHistoryDbPath = valuesHistoryDbPath values
+                , configDbPath = valuesDbPath values
                 , configCheckpointDir = valuesCheckpointDir values
                 , configSigningKeyPath = valuesSigningKeyPath values
                 , configSigningKey = loadedSigningKey

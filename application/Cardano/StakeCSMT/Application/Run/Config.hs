@@ -25,8 +25,7 @@ data RuntimeConfig = RuntimeConfig
     , configNetworkMagic :: Word32
     , configByronEpochSlots :: Word64
     , configLedgerConfigDir :: FilePath
-    , configStakeDbPath :: FilePath
-    , configHistoryDbPath :: FilePath
+    , configDbPath :: FilePath
     , configCheckpointDir :: Maybe FilePath
     , configSigningKeyPath :: Maybe FilePath
     , configSigningKey :: Maybe (SignKeyDSIGN Ed25519DSIGN)
@@ -51,8 +50,7 @@ defaultConfig =
         , configNetworkMagic = 0
         , configByronEpochSlots = 21_600
         , configLedgerConfigDir = "."
-        , configStakeDbPath = "stake.db"
-        , configHistoryDbPath = "history.db"
+        , configDbPath = "stake-csmt.db"
         , configCheckpointDir = Nothing
         , configSigningKeyPath = Nothing
         , configSigningKey = Nothing

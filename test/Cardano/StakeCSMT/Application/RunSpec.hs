@@ -177,6 +177,20 @@ spec =
                             [(apiPortEnvironmentVariable, "18080")]
                     (configPort <$> result) `shouldBe` Right 18080
 
+            it "uses the database path environment fallback"
+                $ withRuntimeFixture
+                $ \fixture -> do
+                    result <-
+                        runtimeConfigFromArguments
+                            (removeFlag "--db" $ requiredArgs fixture)
+                            [
+                                ( "CARDANO_STAKE_CSMT_DB"
+                                , fixtureDbPath fixture
+                                )
+                            ]
+                    (configDbPath <$> result)
+                        `shouldBe` Right (fixtureDbPath fixture)
+
             it "loads an Ed25519 signing key from a file"
                 $ withRuntimeFixture
                 $ \fixture -> do
@@ -231,8 +245,7 @@ data RuntimeFixture = RuntimeFixture
     { fixtureRoot :: FilePath
     , fixtureNodeSocket :: FilePath
     , fixtureLedgerConfigDir :: FilePath
-    , fixtureStakeDbPath :: FilePath
-    , fixtureHistoryDbPath :: FilePath
+    , fixtureDbPath :: FilePath
     }
 
 withRuntimeFixture :: (RuntimeFixture -> IO a) -> IO a
@@ -245,8 +258,7 @@ withRuntimeFixture action =
                     { fixtureRoot = root
                     , fixtureNodeSocket = nodeSocket
                     , fixtureLedgerConfigDir = ledgerConfigDir
-                    , fixtureStakeDbPath = root </> "stake.db"
-                    , fixtureHistoryDbPath = root </> "history.db"
+                    , fixtureDbPath = root </> "store.db"
                     }
         BS.writeFile nodeSocket ""
         createDirectory ledgerConfigDir
@@ -260,10 +272,8 @@ requiredArgs fixture =
     , "42"
     , "--ledger-config-dir"
     , fixtureLedgerConfigDir fixture
-    , "--stake-db"
-    , fixtureStakeDbPath fixture
-    , "--history-db"
-    , fixtureHistoryDbPath fixture
+    , "--db"
+    , fixtureDbPath fixture
     ]
 
 expectedConfig :: RuntimeFixture -> RuntimeConfig
@@ -273,8 +283,7 @@ expectedConfig fixture =
         , configNetworkMagic = 42
         , configByronEpochSlots = 21_600
         , configLedgerConfigDir = fixtureLedgerConfigDir fixture
-        , configStakeDbPath = fixtureStakeDbPath fixture
-        , configHistoryDbPath = fixtureHistoryDbPath fixture
+        , configDbPath = fixtureDbPath fixture
         , configCheckpointDir = Nothing
         , configSigningKeyPath = Nothing
         , configSigningKey = Nothing
@@ -300,14 +309,9 @@ requiredInputs =
         , "CARDANO_STAKE_CSMT_LEDGER_CONFIG_DIR"
         )
     ,
-        ( "stake database path"
-        , "--stake-db"
-        , "CARDANO_STAKE_CSMT_STAKE_DB"
-        )
-    ,
-        ( "history database path"
-        , "--history-db"
-        , "CARDANO_STAKE_CSMT_HISTORY_DB"
+        ( "database path"
+        , "--db"
+        , "CARDANO_STAKE_CSMT_DB"
         )
     ]
 

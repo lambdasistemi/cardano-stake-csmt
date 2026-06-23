@@ -12,6 +12,7 @@ module Cardano.StakeCSMT.Indexer
     , indexStakeSnapshot
     , runIndexer
     , runIndexerWith
+    , runIndexerWithStore
     , withIndexer
     )
 where
@@ -49,6 +50,7 @@ import Cardano.StakeCSMT.Ledger.StakeSnapshot
     , StakeSnapshotError
     , stakeSnapshotFromLedgerState
     )
+import Cardano.StakeCSMT.Store.Columns qualified as Store
 import Control.Concurrent
     ( forkIO
     , killThread
@@ -63,16 +65,27 @@ import Control.Exception
 import Control.Monad
     ( join
     )
+import Data.Bifunctor
+    ( first
+    , second
+    )
 import Data.IORef
     ( newIORef
     , readIORef
     , writeIORef
     )
 import Database.KV.Database
-    ( Database
+    ( Column (..)
+    , Database (..)
+    , getColumn
     )
 import Database.KV.Transaction
-    ( runTransactionUnguarded
+    ( DMap
+    , DSum ((:=>))
+    , GCompare
+    , fromList
+    , mapColumns
+    , runTransactionUnguarded
     )
 
 -- | Errors that make the indexer fail closed.
@@ -99,20 +112,20 @@ type EpochBoundaryHook =
 
 -- | Write a ledger stake snapshot into the stake and history stores.
 indexStakeSnapshot
-    :: Database IO stakeCf Stake.Columns stakeOps
-    -> Database IO historyCf History.Columns historyOps
+    :: Database IO storeCf Store.Columns storeOps
     -> EpochNo
     -> StakeSnapshot
     -> IO (Maybe IndexedEpoch)
-indexStakeSnapshot stakeDb historyDb epoch snapshot = do
-    mEpochRoot <-
-        runTransactionUnguarded stakeDb
-            $ buildEpochCSMT epoch snapshot
-    traverse finalizeHistory mEpochRoot
+indexStakeSnapshot storeDb epoch snapshot =
+    runTransactionUnguarded storeDb $ do
+        mEpochRoot <-
+            mapColumns Store.StakeColumn
+                $ buildEpochCSMT epoch snapshot
+        traverse finalizeHistory mEpochRoot
   where
     finalizeHistory epochRoot = do
         historyRoot <-
-            runTransactionUnguarded historyDb
+            mapColumns Store.HistoryColumn
                 $ finalizeEpochRoot epoch epochRoot
         pure
             IndexedEpoch
@@ -124,14 +137,28 @@ indexStakeSnapshot stakeDb historyDb epoch snapshot = do
 -- | Run the checkpoint-backed indexer using the default ChainSync runner.
 runIndexer
     :: LedgerConfigBundle
-    -> Database IO stakeCf Stake.Columns stakeOps
-    -> Database IO historyCf History.Columns historyOps
+    -> Database IO storeCf Store.Columns storeOps
     -> ReplayFollowerConfig
     -> ReplayCheckpointConfig
     -> Maybe EpochBoundaryHook
     -> IO (Either SomeException ())
 runIndexer =
-    runIndexerWith defaultReplayChainSyncRunner
+    runIndexerWithStore defaultReplayChainSyncRunner
+
+-- | Run the checkpoint-backed indexer over the unified store.
+runIndexerWithStore
+    :: ReplayChainSyncRunner
+    -> LedgerConfigBundle
+    -> Database IO storeCf Store.Columns storeOps
+    -> ReplayFollowerConfig
+    -> ReplayCheckpointConfig
+    -> Maybe EpochBoundaryHook
+    -> IO (Either SomeException ())
+runIndexerWithStore chainSyncRunner bundle storeDb =
+    runIndexerWithIndexing
+        chainSyncRunner
+        bundle
+        (indexStakeSnapshot storeDb)
 
 -- | Run the checkpoint-backed indexer with an injected ChainSync runner.
 runIndexerWith
@@ -147,7 +174,24 @@ runIndexerWith
     chainSyncRunner
     bundle
     stakeDb
-    historyDb
+    historyDb =
+        runIndexerWithIndexing
+            chainSyncRunner
+            bundle
+            (indexStakeSnapshot $ mkSplitStoreDatabase stakeDb historyDb)
+
+runIndexerWithIndexing
+    :: ReplayChainSyncRunner
+    -> LedgerConfigBundle
+    -> (EpochNo -> StakeSnapshot -> IO (Maybe IndexedEpoch))
+    -> ReplayFollowerConfig
+    -> ReplayCheckpointConfig
+    -> Maybe EpochBoundaryHook
+    -> IO (Either SomeException ())
+runIndexerWithIndexing
+    chainSyncRunner
+    bundle
+    indexSnapshot
     followerConfig
     checkpointConfig
     hook = do
@@ -185,9 +229,7 @@ runIndexerWith
                             $ stakeSnapshotFromLedgerState
                             $ replayStateLedgerState nextState
                     indexed <-
-                        indexStakeSnapshot
-                            stakeDb
-                            historyDb
+                        indexSnapshot
                             (EpochNo $ replayStateLastEpoch nextState)
                             snapshot
                     maybe
@@ -199,8 +241,7 @@ runIndexerWith
 -- | Run an action while the indexer thread is active.
 withIndexer
     :: LedgerConfigBundle
-    -> Database IO stakeCf Stake.Columns stakeOps
-    -> Database IO historyCf History.Columns historyOps
+    -> Database IO storeCf Store.Columns storeOps
     -> ReplayFollowerConfig
     -> ReplayCheckpointConfig
     -> Maybe EpochBoundaryHook
@@ -208,8 +249,7 @@ withIndexer
     -> IO a
 withIndexer
     bundle
-    stakeDb
-    historyDb
+    storeDb
     followerConfig
     checkpointConfig
     hook
@@ -221,9 +261,129 @@ withIndexer
                 result <-
                     runIndexer
                         bundle
-                        stakeDb
-                        historyDb
+                        storeDb
                         followerConfig
                         checkpointConfig
                         hook
                 either throwIO pure result
+
+data SplitOp stakeOps historyOps
+    = StakeOp stakeOps
+    | HistoryOp historyOps
+
+mkSplitStoreDatabase
+    :: Database IO stakeCf Stake.Columns stakeOps
+    -> Database IO historyCf History.Columns historyOps
+    -> Database
+        IO
+        (Either stakeCf historyCf)
+        Store.Columns
+        (SplitOp stakeOps historyOps)
+mkSplitStoreDatabase stakeDb historyDb =
+    Database
+        { valueAt = \cf key ->
+            case cf of
+                Left stakeCf ->
+                    valueAt stakeDb stakeCf key
+                Right historyCf ->
+                    valueAt historyDb historyCf key
+        , applyOps = \ops -> do
+            let (stakeOps, historyOps) = splitOps ops
+            applyOps stakeDb stakeOps
+            applyOps historyDb historyOps
+        , mkOperation = \cf key value ->
+            case cf of
+                Left stakeCf ->
+                    StakeOp $ mkOperation stakeDb stakeCf key value
+                Right historyCf ->
+                    HistoryOp $ mkOperation historyDb historyCf key value
+        , newIterator = \case
+            Left stakeCf ->
+                newIterator stakeDb stakeCf
+            Right historyCf ->
+                newIterator historyDb historyCf
+        , columns =
+            fromList
+                [ Store.StakeColumn Stake.SnapshotCol
+                    :=> leftColumnFrom
+                        (columns stakeDb)
+                        Stake.SnapshotCol
+                , Store.StakeColumn Stake.TreeCol
+                    :=> leftColumnFrom
+                        (columns stakeDb)
+                        Stake.TreeCol
+                , Store.StakeColumn Stake.RootCol
+                    :=> leftColumnFrom
+                        (columns stakeDb)
+                        Stake.RootCol
+                , Store.HistoryColumn History.HistoryLeafCol
+                    :=> rightColumnFrom
+                        (columns historyDb)
+                        History.HistoryLeafCol
+                , Store.HistoryColumn History.HistoryTreeCol
+                    :=> rightColumnFrom
+                        (columns historyDb)
+                        History.HistoryTreeCol
+                , Store.HistoryColumn History.HistoryRootCol
+                    :=> rightColumnFrom
+                        (columns historyDb)
+                        History.HistoryRootCol
+                ]
+        , withSnapshot = \action ->
+            withSnapshot stakeDb $ \stakeSnapshot ->
+                withSnapshot historyDb $ \historySnapshot ->
+                    action
+                        $ mkSplitStoreDatabase
+                            stakeSnapshot
+                            historySnapshot
+        }
+  where
+    splitOps =
+        foldr
+            ( \case
+                StakeOp op -> \(stakeOps, historyOps) ->
+                    first (op :) (stakeOps, historyOps)
+                HistoryOp op -> \(stakeOps, historyOps) ->
+                    second (op :) (stakeOps, historyOps)
+            )
+            ([], [])
+
+leftColumnFrom
+    :: DMap Stake.Columns (Column stakeCf)
+    -> Stake.Columns c
+    -> Column (Either stakeCf historyCf) c
+leftColumnFrom stakeColumns selector =
+    mapColumn Left
+        $ expectColumnIn
+            "mkSplitStoreDatabase: stake column not found"
+            selector
+            stakeColumns
+
+rightColumnFrom
+    :: DMap History.Columns (Column historyCf)
+    -> History.Columns c
+    -> Column (Either stakeCf historyCf) c
+rightColumnFrom historyColumns selector =
+    mapColumn Right
+        $ expectColumnIn
+            "mkSplitStoreDatabase: history column not found"
+            selector
+            historyColumns
+
+expectColumnIn
+    :: GCompare columns
+    => String
+    -> columns c
+    -> DMap columns (Column cf)
+    -> Column cf c
+expectColumnIn message selector availableColumns =
+    case getColumn selector availableColumns of
+        Just column -> column
+        Nothing -> error message
+
+mapColumn :: (cf -> cf') -> Column cf c -> Column cf' c
+mapColumn f Column{family, codecs} =
+    Column
+        { family = f family
+        , codecs
+        }

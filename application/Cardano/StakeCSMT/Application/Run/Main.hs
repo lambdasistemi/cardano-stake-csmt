@@ -31,10 +31,6 @@ import Cardano.StakeCSMT.Application.Run.Config
     , configApiPort
     )
 import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
-import Cardano.StakeCSMT.CSMT.RocksDB
-    ( mkStakeCSMTDatabase
-    , withStakeCSMTRocksDB
-    )
 import Cardano.StakeCSMT.HTTP.API
     ( ReadyResponse (..)
     )
@@ -47,9 +43,13 @@ import Cardano.StakeCSMT.HTTP.Server
     , runDocsServer
     )
 import Cardano.StakeCSMT.History.Columns qualified as History
-import Cardano.StakeCSMT.History.RocksDB
-    ( mkHistoryDatabase
-    , withHistoryRocksDB
+import Cardano.StakeCSMT.Store.Columns
+    ( historyDatabase
+    , stakeDatabase
+    )
+import Cardano.StakeCSMT.Store.RocksDB
+    ( mkStoreDatabase
+    , withStoreRocksDB
     )
 import Control.Concurrent
     ( forkIO
@@ -139,18 +139,17 @@ withRuntimeHandlersUsingReadiness
 withRuntimeHandlersUsingReadiness
     readiness
     RuntimeConfig
-        { configStakeDbPath
-        , configHistoryDbPath
+        { configDbPath
         , configSigningKey
         }
     action =
-        withStakeCSMTRocksDB configStakeDbPath $ \stakeRocksDB ->
-            withHistoryRocksDB configHistoryDbPath $ \historyRocksDB ->
-                action
+        withStoreRocksDB configDbPath $ \rocksDB ->
+            let storeDb = mkStoreDatabase rocksDB
+            in  action
                     $ runtimeHandlers
                         readiness
-                        (mkStakeCSMTDatabase stakeRocksDB)
-                        (mkHistoryDatabase historyRocksDB)
+                        (stakeDatabase storeDb)
+                        (historyDatabase storeDb)
                         configSigningKey
 
 runtimeHandlers
