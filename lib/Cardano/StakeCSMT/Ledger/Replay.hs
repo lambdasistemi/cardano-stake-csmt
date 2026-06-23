@@ -17,6 +17,9 @@ where
 import Cardano.Chain.Slotting
     ( EpochSlots (..)
     )
+import Cardano.Ledger.Shelley.LedgerState
+    ( nesEL
+    )
 import Cardano.Node.Client.N2C.ChainSync
     ( Fetched (..)
     , HeaderPoint
@@ -24,7 +27,8 @@ import Cardano.Node.Client.N2C.ChainSync
     , runChainSyncN2C
     )
 import Cardano.Slotting.Slot
-    ( SlotNo (..)
+    ( EpochNo (..)
+    , SlotNo (..)
     )
 import Cardano.StakeCSMT.Ledger.Checkpoint
     ( CheckpointPoint (..)
@@ -66,6 +70,16 @@ import Data.Word
 import Ouroboros.Consensus.Block
     ( blockSlot
     )
+import Ouroboros.Consensus.Cardano.Block
+    ( pattern LedgerStateAllegra
+    , pattern LedgerStateAlonzo
+    , pattern LedgerStateBabbage
+    , pattern LedgerStateByron
+    , pattern LedgerStateConway
+    , pattern LedgerStateDijkstra
+    , pattern LedgerStateMary
+    , pattern LedgerStateShelley
+    )
 import Ouroboros.Consensus.Ledger.Abstract
     ( ComputeLedgerEvents (OmitLedgerEvents)
     , tickThenReapply
@@ -76,9 +90,13 @@ import Ouroboros.Consensus.Ledger.Basics
 import Ouroboros.Consensus.Ledger.Extended
     ( ExtLedgerCfg (ExtLedgerCfg)
     , ExtLedgerState
+    , ledgerState
     )
 import Ouroboros.Consensus.Ledger.Tables.Utils
     ( applyDiffs
+    )
+import Ouroboros.Consensus.Shelley.Ledger
+    ( shelleyLedgerState
     )
 import Ouroboros.Network.Block qualified as Network
 import Ouroboros.Network.Magic
@@ -168,12 +186,40 @@ replayBlock bundle@LedgerConfigBundle{ledgerConfigTopLevelConfig} notify state b
                 previousLedgerState
         nextLedgerState = applyDiffs previousLedgerState diffLedgerState
         SlotNo slot = blockSlot block
-    epoch <- ledgerConfigEpochAt bundle slot
+    epoch <- observedEpochAt bundle slot nextLedgerState
     observeEpochTransition
         notify
         state{replayStateLedgerState = nextLedgerState}
         slot
         epoch
+
+observedEpochAt
+    :: LedgerConfigBundle
+    -> Word64
+    -> ExtLedgerState StakeBlock ValuesMK
+    -> IO Word64
+observedEpochAt bundle slot extLedgerState =
+    case ledgerState extLedgerState of
+        LedgerStateByron _ ->
+            ledgerConfigEpochAt bundle slot
+        LedgerStateShelley st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateAllegra st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateMary st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateAlonzo st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateBabbage st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateConway st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+        LedgerStateDijkstra st ->
+            pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+
+epochToWord64 :: EpochNo -> Word64
+epochToWord64 (EpochNo epoch) =
+    epoch
 
 runReplayFollower
     :: LedgerConfigBundle
