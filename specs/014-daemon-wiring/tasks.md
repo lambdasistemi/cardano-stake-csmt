@@ -50,12 +50,12 @@
 
 ## Slice 4 - Finalization
 
-- [ ] T014-F Run `just ci` at HEAD.
-- [ ] T015-F Run `nix build .#default` at HEAD.
-- [ ] T016-F Run `nix build .#e2e-tests` at HEAD if this ticket changes or
+- [X] T014-F Run `just ci` at HEAD.
+- [X] T015-F Run `nix build .#default` at HEAD.
+- [X] T016-F Run `nix build .#e2e-tests` at HEAD if this ticket changes or
   adds e2e coverage.
-- [ ] T017-F Update the draft PR body with delivered behavior and
+- [X] T017-F Update the draft PR body with delivered behavior and
   verification evidence.
-- [ ] T018-F Drop `gate.sh` in
+- [X] T018-F Drop `gate.sh` in
   `chore: drop gate.sh (ready for review)`, push, and report COMPLETE with
   PR URL and head SHA.
