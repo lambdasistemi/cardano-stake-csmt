@@ -30,10 +30,12 @@ import Cardano.StakeCSMT.History.Builder
     )
 import Cardano.StakeCSMT.Indexer
     ( IndexedEpoch (..)
+    , handleEpochBoundarySnapshot
     , indexStakeSnapshot
     )
 import Cardano.StakeCSMT.Ledger.StakeSnapshot
     ( StakeSnapshot (..)
+    , StakeSnapshotError (..)
     )
 import Cardano.StakeCSMT.Store.Columns qualified as Store
 import Data.ByteString
@@ -143,6 +145,57 @@ spec =
             result `shouldBe` Nothing
             storedEpochRoot `shouldBe` Nothing
             currentHistoryRoot `shouldBe` Nothing
+
+        it "skips Byron-era boundary snapshots without writing stores" $ do
+            writerCalled <- newIORef False
+            storeDb <- freshStoreDb
+            let stakeDb = Store.stakeDatabase storeDb
+                historyDb = Store.historyDatabase storeDb
+                writeSnapshot epoch snapshot = do
+                    modifyIORef' writerCalled $ const True
+                    indexStakeSnapshot storeDb epoch snapshot
+
+            result <-
+                handleEpochBoundarySnapshot
+                    writeSnapshot
+                    testEpoch
+                    (Left StakeSnapshotByronEra)
+            storedEpochRoot <-
+                runTransactionUnguarded stakeDb
+                    $ queryEpochRoot testEpoch
+            currentHistoryRoot <-
+                runTransactionUnguarded historyDb queryHistoryRoot
+
+            result `shouldBe` Nothing
+            readIORef writerCalled `shouldReturn` False
+            storedEpochRoot `shouldBe` Nothing
+            currentHistoryRoot `shouldBe` Nothing
+
+        it "indexes successful boundary snapshots through the boundary helper" $ do
+            storeDb <- freshStoreDb
+            let stakeDb = Store.stakeDatabase storeDb
+                historyDb = Store.historyDatabase storeDb
+
+            result <-
+                handleEpochBoundarySnapshot
+                    (indexStakeSnapshot storeDb)
+                    testEpoch
+                    (Right nonEmptySnapshot)
+
+            case result of
+                Nothing ->
+                    fail "expected a non-empty boundary snapshot to be indexed"
+                Just IndexedEpoch{..} -> do
+                    indexedEpoch `shouldBe` testEpoch
+
+                    storedEpochRoot <-
+                        runTransactionUnguarded stakeDb
+                            $ queryEpochRoot testEpoch
+                    currentHistoryRoot <-
+                        runTransactionUnguarded historyDb queryHistoryRoot
+
+                    storedEpochRoot `shouldBe` Just indexedEpochRoot
+                    currentHistoryRoot `shouldBe` Just indexedHistoryRoot
 
         it "commits epoch CSMT and history finalization as one write unit" $ do
             commitCount <- newIORef 0
