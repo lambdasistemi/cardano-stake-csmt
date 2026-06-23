@@ -10,8 +10,24 @@ import Cardano.Crypto.DSIGN.Class
 import Cardano.Crypto.DSIGN.Ed25519
     ( Ed25519DSIGN
     )
+import Cardano.Crypto.Hash.Class
+    ( hashFromBytes
+    )
 import Cardano.Crypto.Seed
     ( mkSeedFromBytes
+    )
+import Cardano.Ledger.Coin
+    ( Coin (..)
+    )
+import Cardano.Ledger.Credential
+    ( Credential (KeyHashObj)
+    )
+import Cardano.Ledger.Keys
+    ( KeyHash (..)
+    , KeyRole (Staking)
+    )
+import Cardano.Slotting.Slot
+    ( EpochNo (..)
     )
 import Cardano.StakeCSMT.Application.Run.CLI
     ( runtimeConfigFromArguments
@@ -27,14 +43,36 @@ import Cardano.StakeCSMT.Application.Run.Main
     , applications
     , markRuntimeReady
     , newRuntimeReadinessSignal
+    , withRuntimeHandlersUsingIndexer
     , withRuntimeHandlersUsingReadiness
     )
 import Cardano.StakeCSMT.HTTP.API
     ( ReadyResponse (..)
+    , StakeProofResponse (..)
+    , StakeRootResponse (..)
     )
 import Cardano.StakeCSMT.HTTP.Server
-    ( QueryHandlers (queryReady)
+    ( QueryHandlers (..)
     , unavailableHandlers
+    )
+import Cardano.StakeCSMT.Indexer
+    ( indexStakeSnapshot
+    )
+import Cardano.StakeCSMT.Ledger.Replay
+    ( EpochTransition (..)
+    )
+import Cardano.StakeCSMT.Ledger.StakeSnapshot
+    ( StakeSnapshot (..)
+    )
+import Control.Concurrent
+    ( newEmptyMVar
+    , putMVar
+    , takeMVar
+    )
+import Control.Exception
+    ( Exception
+    , throwIO
+    , try
     )
 import Data.ByteString
     ( ByteString
@@ -42,6 +80,10 @@ import Data.ByteString
 import Data.ByteString qualified as BS
 import Data.List
     ( isInfixOf
+    )
+import Data.Map.Strict qualified as Map
+import Data.Maybe
+    ( isJust
     )
 import Network.HTTP.Types
     ( methodGet
@@ -241,6 +283,110 @@ spec =
                         queryReady handlers
                             >>= (`shouldBe` ReadyResponse{ready = True})
 
+        it
+            "marks ready and serves real roots after the indexer writes an epoch"
+            $ withRuntimeFixture
+            $ \fixture -> do
+                readiness <- newRuntimeReadinessSignal
+                indexerStarted <- newEmptyMVar @()
+                beginIndexing <- newEmptyMVar @()
+                indexed <- newEmptyMVar
+                blockIndexer <- newEmptyMVar @()
+                let injectedIndexer storeDb hook = do
+                        putMVar indexerStarted ()
+                        takeMVar beginIndexing
+                        result <-
+                            indexStakeSnapshot
+                                storeDb
+                                testEpoch
+                                nonEmptySnapshot
+                        hook testTransition result
+                        putMVar indexed result
+                        takeMVar blockIndexer
+                        pure $ Right ()
+
+                withRuntimeHandlersUsingIndexer
+                    readiness
+                    (expectedConfig fixture)
+                    injectedIndexer
+                    $ \handlers -> do
+                        takeMVar indexerStarted
+                        queryReady handlers
+                            >>= (`shouldBe` ReadyResponse{ready = False})
+
+                        putMVar beginIndexing ()
+                        written <- takeMVar indexed
+                        case written of
+                            Nothing ->
+                                fail "expected the indexer to write an epoch"
+                            Just _ ->
+                                pure ()
+
+                        queryReady handlers
+                            >>= (`shouldBe` ReadyResponse{ready = True})
+                        roots <- queryEpochRoots handlers
+                        fmap (\StakeRootResponse{epoch} -> epoch) roots
+                            `shouldBe` [testEpoch]
+
+        it "fails closed when the background indexer throws"
+            $ withRuntimeFixture
+            $ \fixture -> do
+                readiness <- newRuntimeReadinessSignal
+                foregroundEntered <- newEmptyMVar @()
+                neverFinish <- newEmptyMVar @()
+                let injectedIndexer _storeDb _hook = do
+                        takeMVar foregroundEntered
+                        throwIO TestIndexerFailure
+
+                result <-
+                    try @TestIndexerFailure
+                        $ withRuntimeHandlersUsingIndexer
+                            readiness
+                            (expectedConfig fixture)
+                            injectedIndexer
+                        $ \_handlers -> do
+                            putMVar foregroundEntered ()
+                            takeMVar neverFinish
+
+                result `shouldBe` Left TestIndexerFailure
+
+        it
+            "shares one RocksDB handle between indexer writes and handler reads"
+            $ withRuntimeFixture
+            $ \fixture -> do
+                readiness <- newRuntimeReadinessSignal
+                beginIndexing <- newEmptyMVar @()
+                indexed <- newEmptyMVar @()
+                blockIndexer <- newEmptyMVar @()
+                let injectedIndexer storeDb hook = do
+                        takeMVar beginIndexing
+                        result <-
+                            indexStakeSnapshot
+                                storeDb
+                                testEpoch
+                                nonEmptySnapshot
+                        hook testTransition result
+                        putMVar indexed ()
+                        takeMVar blockIndexer
+                        pure $ Right ()
+
+                withRuntimeHandlersUsingIndexer
+                    readiness
+                    (expectedConfig fixture)
+                    injectedIndexer
+                    $ \handlers -> do
+                        putMVar beginIndexing ()
+                        takeMVar indexed
+
+                        latestProof <- queryLatestProof handlers credentialA
+                        case latestProof of
+                            Nothing ->
+                                fail "expected a proof from the shared store"
+                            Just StakeProofResponse{stake} ->
+                                stake `shouldBe` Coin 10
+
+                        queryHistoryRoot handlers `shouldSatisfyM` isJust
+
 data RuntimeFixture = RuntimeFixture
     { fixtureRoot :: FilePath
     , fixtureNodeSocket :: FilePath
@@ -345,6 +491,54 @@ shouldFailWith result expectedMessage =
 signingKey :: SignKeyDSIGN Ed25519DSIGN
 signingKey =
     genKeyDSIGN @Ed25519DSIGN $ mkSeedFromBytes $ BS.replicate 32 11
+
+testEpoch :: EpochNo
+testEpoch = EpochNo 42
+
+testTransition :: EpochTransition
+testTransition =
+    EpochTransition
+        { epochTransitionPreviousEpoch = 41
+        , epochTransitionNewEpoch = 42
+        , epochTransitionSlot = 12_345
+        }
+
+nonEmptySnapshot :: StakeSnapshot
+nonEmptySnapshot =
+    StakeSnapshot
+        { stakeSnapshotStake =
+            Map.fromList
+                [ (credentialA, Coin 10)
+                , (credentialB, Coin 20)
+                , (credentialC, Coin 30)
+                ]
+        , stakeSnapshotTotalStake = Coin 60
+        }
+
+credentialA :: Credential Staking
+credentialA = testCredential 7
+
+credentialB :: Credential Staking
+credentialB = testCredential 8
+
+credentialC :: Credential Staking
+credentialC = testCredential 9
+
+testCredential :: Word -> Credential Staking
+testCredential byte =
+    case hashFromBytes $ BS.replicate 28 $ fromIntegral byte of
+        Nothing -> error "invalid deterministic key hash bytes"
+        Just keyHash -> KeyHashObj $ KeyHash keyHash
+
+data TestIndexerFailure = TestIndexerFailure
+    deriving stock (Eq, Show)
+
+instance Exception TestIndexerFailure
+
+shouldSatisfyM :: Show a => IO a -> (a -> Bool) -> Expectation
+shouldSatisfyM action predicate = do
+    value <- action
+    value `shouldSatisfy` predicate
 
 get :: ByteString -> Application -> IO SResponse
 get path =
