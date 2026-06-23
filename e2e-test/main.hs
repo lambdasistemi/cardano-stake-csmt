@@ -7,6 +7,7 @@ import Cardano.StakeCSMT.Application.Run.Config
     , defaultConfig
     )
 import Cardano.StakeCSMT.E2E.IndexerSpec qualified as IndexerSpec
+import Cardano.StakeCSMT.E2E.LiveHTTPSpec qualified as LiveHTTPSpec
 import Cardano.StakeCSMT.E2E.ReplaySpec qualified as ReplaySpec
 import Test.Hspec
     ( describe
@@ -23,4 +24,5 @@ main =
             $ configPort defaultConfig
             `shouldBe` 8080
         IndexerSpec.spec
+        LiveHTTPSpec.spec
         ReplaySpec.spec
