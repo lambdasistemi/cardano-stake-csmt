@@ -84,6 +84,8 @@ library library
     Cardano.StakeCSMT.Ledger.Checkpoint
     Cardano.StakeCSMT.Ledger.Replay
     Cardano.StakeCSMT.Ledger.StakeSnapshot
+    Cardano.StakeCSMT.Store.Columns
+    Cardano.StakeCSMT.Store.RocksDB
 
   build-depends:
     , aeson

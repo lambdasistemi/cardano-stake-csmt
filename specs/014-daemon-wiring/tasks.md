@@ -14,18 +14,18 @@
 
 ## Slice 2 - Atomic Epoch Write
 
-- [ ] T004-S2 Unify stake CSMT and history RocksDB opening so both typed
+- [X] T004-S2 Unify stake CSMT and history RocksDB opening so both typed
   stores live under one physical RocksDB instance and one transaction context.
-- [ ] T005-S2 Collapse daemon config and CLI from `configStakeDbPath` plus
+- [X] T005-S2 Collapse daemon config and CLI from `configStakeDbPath` plus
   `configHistoryDbPath` to one store path such as `configDbPath`, with one
   `--db` flag and fail-closed validation/environment fallback.
-- [ ] T006-S2 Refactor `indexStakeSnapshot` so `buildEpochCSMT epoch snapshot`
+- [X] T006-S2 Refactor `indexStakeSnapshot` so `buildEpochCSMT epoch snapshot`
   and `finalizeEpochRoot epoch root` commit in one transaction over the unified
   store.
-- [ ] T007-S2 Add focused atomicity coverage proving an epoch CSMT build and
+- [X] T007-S2 Add focused atomicity coverage proving an epoch CSMT build and
   history-root finalization are one write unit, ideally with failure injection
   showing no epoch root is visible without its history finalization.
-- [ ] T008-S2 Run `nix develop --quiet -c just unit "Indexer"`,
+- [X] T008-S2 Run `nix develop --quiet -c just unit "Indexer"`,
   `nix develop --quiet -c just unit "Application.Run"`, and `./gate.sh`, then
   commit as `feat(indexer): make epoch writes atomic`.
 

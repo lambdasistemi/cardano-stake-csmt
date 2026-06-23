@@ -23,13 +23,11 @@ import Cardano.StakeCSMT.CSMT.Builder
     , queryEpochRoot
     , verifyCredentialProof
     )
-import Cardano.StakeCSMT.CSMT.Columns qualified as Stake
 import Cardano.StakeCSMT.History.Builder
     ( buildEpochRootProof
     , queryHistoryRoot
     , verifyEpochRootProof
     )
-import Cardano.StakeCSMT.History.Columns qualified as History
 import Cardano.StakeCSMT.Indexer
     ( IndexedEpoch (..)
     , indexStakeSnapshot
@@ -37,13 +35,20 @@ import Cardano.StakeCSMT.Indexer
 import Cardano.StakeCSMT.Ledger.StakeSnapshot
     ( StakeSnapshot (..)
     )
+import Cardano.StakeCSMT.Store.Columns qualified as Store
 import Data.ByteString
     ( ByteString
     )
 import Data.ByteString qualified as BS
+import Data.IORef
+    ( IORef
+    , modifyIORef'
+    , newIORef
+    , readIORef
+    )
 import Data.Map.Strict qualified as Map
 import Database.KV.Database
-    ( Database
+    ( Database (..)
     , mkColumns
     )
 import Database.KV.InMemory
@@ -57,19 +62,20 @@ import Test.Hspec
     , describe
     , it
     , shouldBe
+    , shouldReturn
     )
 
 spec :: Spec
 spec =
     describe "Indexer" $ do
         it "writes a non-empty snapshot to stake and history stores" $ do
-            stakeDb <- freshStakeDb
-            historyDb <- freshHistoryDb
+            storeDb <- freshStoreDb
+            let stakeDb = Store.stakeDatabase storeDb
+                historyDb = Store.historyDatabase storeDb
 
             result <-
                 indexStakeSnapshot
-                    stakeDb
-                    historyDb
+                    storeDb
                     testEpoch
                     nonEmptySnapshot
 
@@ -119,13 +125,13 @@ spec =
                                 `shouldBe` True
 
         it "does not write history when the snapshot is empty" $ do
-            stakeDb <- freshStakeDb
-            historyDb <- freshHistoryDb
+            storeDb <- freshStoreDb
+            let stakeDb = Store.stakeDatabase storeDb
+                historyDb = Store.historyDatabase storeDb
 
             result <-
                 indexStakeSnapshot
-                    stakeDb
-                    historyDb
+                    storeDb
                     testEpoch
                     emptySnapshot
             storedEpochRoot <-
@@ -138,27 +144,45 @@ spec =
             storedEpochRoot `shouldBe` Nothing
             currentHistoryRoot `shouldBe` Nothing
 
-freshStakeDb
-    :: IO
-        ( Database
-            IO
-            Int
-            Stake.Columns
-            (Int, ByteString, Maybe ByteString)
-        )
-freshStakeDb =
-    mkInMemoryDatabase $ mkColumns [0 :: Int ..] Stake.codecs
+        it "commits epoch CSMT and history finalization as one write unit" $ do
+            commitCount <- newIORef 0
+            storeDb <- countingDatabase commitCount <$> freshStoreDb
 
-freshHistoryDb
+            result <-
+                indexStakeSnapshot
+                    storeDb
+                    testEpoch
+                    nonEmptySnapshot
+
+            case result of
+                Nothing ->
+                    fail "expected a non-empty snapshot to be indexed"
+                Just _ ->
+                    readIORef commitCount `shouldReturn` 1
+
+freshStoreDb
     :: IO
         ( Database
             IO
             Int
-            History.Columns
+            Store.Columns
             (Int, ByteString, Maybe ByteString)
         )
-freshHistoryDb =
-    mkInMemoryDatabase $ mkColumns [0 :: Int ..] History.codecs
+freshStoreDb =
+    mkInMemoryDatabase $ mkColumns [0 :: Int ..] Store.codecs
+
+countingDatabase
+    :: IORef Int
+    -> Database IO cf columns ops
+    -> Database IO cf columns ops
+countingDatabase commitCount db =
+    db
+        { applyOps = \ops -> do
+            modifyIORef' commitCount (+ 1)
+            applyOps db ops
+        , withSnapshot = \action ->
+            withSnapshot db $ action . countingDatabase commitCount
+        }
 
 testEpoch :: EpochNo
 testEpoch = EpochNo 42
