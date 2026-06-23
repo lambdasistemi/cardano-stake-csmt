@@ -2,15 +2,15 @@
 
 ## Slice 1 - Boundary Decision
 
-- [ ] T001 Add a narrow boundary-handling seam in
+- [X] T001 Add a narrow boundary-handling seam in
   `lib/Cardano/StakeCSMT/Indexer.hs` that skips `StakeSnapshotByronEra`.
-- [ ] T002 Preserve fatal `IndexerSnapshotError` behavior for any non-Byron
+- [X] T002 Preserve fatal `IndexerSnapshotError` behavior for any non-Byron
   snapshot extraction error.
-- [ ] T003 Add focused `IndexerSpec` coverage proving Byron boundaries skip
+- [X] T003 Add focused `IndexerSpec` coverage proving Byron boundaries skip
   without writes or exceptions.
-- [ ] T004 Add focused `IndexerSpec` coverage proving successful post-Shelley
+- [X] T004 Add focused `IndexerSpec` coverage proving successful post-Shelley
   snapshots still index through the same boundary helper.
-- [ ] T005 Run `nix develop --quiet -c just unit "Indexer"` and `./gate.sh`,
+- [X] T005 Run `nix develop --quiet -c just unit "Indexer"` and `./gate.sh`,
   then commit as `fix(indexer): skip Byron-era epoch boundaries`.
 
 ## Slice 2 - Finalization

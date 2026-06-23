@@ -9,6 +9,7 @@ module Cardano.StakeCSMT.Indexer
     ( IndexerError (..)
     , IndexedEpoch (..)
     , EpochBoundaryHook
+    , handleEpochBoundarySnapshot
     , indexStakeSnapshot
     , runIndexer
     , runIndexerWith
@@ -47,7 +48,7 @@ import Cardano.StakeCSMT.Ledger.Replay
     )
 import Cardano.StakeCSMT.Ledger.StakeSnapshot
     ( StakeSnapshot
-    , StakeSnapshotError
+    , StakeSnapshotError (..)
     , stakeSnapshotFromLedgerState
     )
 import Cardano.StakeCSMT.Store.Columns qualified as Store
@@ -109,6 +110,22 @@ data IndexedEpoch = IndexedEpoch
 -- | Callback invoked after an observed epoch boundary has been handled.
 type EpochBoundaryHook =
     EpochTransition -> Maybe IndexedEpoch -> IO ()
+
+-- | Handle an epoch-boundary snapshot result, skipping Byron-era boundaries.
+handleEpochBoundarySnapshot
+    :: (EpochNo -> StakeSnapshot -> IO (Maybe IndexedEpoch))
+    -> EpochNo
+    -> Either StakeSnapshotError StakeSnapshot
+    -> IO (Maybe IndexedEpoch)
+handleEpochBoundarySnapshot indexSnapshot epoch snapshotResult =
+    case snapshotResult of
+        Left err
+            | err == StakeSnapshotByronEra ->
+                pure Nothing
+            | otherwise ->
+                throwIO $ IndexerSnapshotError err
+        Right snapshot ->
+            indexSnapshot epoch snapshot
 
 -- | Write a ledger stake snapshot into the stake and history stores.
 indexStakeSnapshot
@@ -222,16 +239,13 @@ runIndexerWithIndexing
                 Nothing ->
                     pure nextState
                 Just transition -> do
-                    snapshot <-
-                        either
-                            (throwIO . IndexerSnapshotError)
-                            pure
-                            $ stakeSnapshotFromLedgerState
-                            $ replayStateLedgerState nextState
                     indexed <-
-                        indexSnapshot
+                        handleEpochBoundarySnapshot
+                            indexSnapshot
                             (EpochNo $ replayStateLastEpoch nextState)
-                            snapshot
+                            ( stakeSnapshotFromLedgerState
+                                $ replayStateLedgerState nextState
+                            )
                     maybe
                         (pure ())
                         (\notify -> notify transition indexed)
