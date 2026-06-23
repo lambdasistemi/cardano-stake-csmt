@@ -33,9 +33,9 @@
 
 ## Finalization
 
-- [ ] T011-F Run `just ci` at HEAD.
-- [ ] T012-F Run `nix build .#default .#e2e-tests` at HEAD.
-- [ ] T013-F Update PR #32 body with delivered behavior and verification
+- [X] T011-F Run `just ci` at HEAD.
+- [X] T012-F Run `nix build .#default .#e2e-tests` at HEAD.
+- [X] T013-F Update PR #32 body with delivered behavior and verification
   evidence, including `Closes #26`.
-- [ ] T014-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)`, push,
+- [X] T014-F Drop `gate.sh` in `chore: drop gate.sh (ready for review)`, push,
   mark the PR ready, and report COMPLETE with PR URL and head SHA.
