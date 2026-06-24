@@ -25,6 +25,7 @@ import Cardano.StakeCSMT.Ledger.Replay
     , ReplayCheckpointConfig (..)
     , ReplayFollowerConfig (..)
     , ReplayState (..)
+    , byronEpochAt
     , initialReplayState
     , observeEpochTransition
     , runReplayFollowerWith
@@ -75,6 +76,9 @@ spec =
             replayStateLedgerState state
                 `shouldBe` ledgerConfigGenesisState bundle
             replayStateLastEpoch state `shouldBe` 0
+
+        it "derives Byron epochs past the first-era horizon" $ do
+            byronEpochAt 21_600 23_761 `shouldBe` 1
 
         it "emits epoch transitions once per observed epoch change" $ do
             bundle <- loadDevnetBundle

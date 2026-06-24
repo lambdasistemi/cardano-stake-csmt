@@ -2,14 +2,14 @@
 
 ## Slice 1 - Byron Epoch Derivation
 
-- [ ] T001 Add a narrow helper or testability seam for uniform Byron epoch
+- [X] T001 Add a narrow helper or testability seam for uniform Byron epoch
   derivation from Byron epoch slots and block slot.
-- [ ] T002 Replace the `LedgerStateByron` hot-path epoch lookup so arbitrary
+- [X] T002 Replace the `LedgerStateByron` hot-path epoch lookup so arbitrary
   Byron block slots do not call `ledgerConfigEpochAt` or `epochInfoEpoch`.
-- [ ] T003 Preserve all post-Shelley epoch branches unchanged.
-- [ ] T004 Add focused `Ledger.ReplaySpec` coverage for a Byron slot greater
+- [X] T003 Preserve all post-Shelley epoch branches unchanged.
+- [X] T004 Add focused `Ledger.ReplaySpec` coverage for a Byron slot greater
   than 21600 deriving the expected epoch without throwing.
-- [ ] T005 Run `nix develop --quiet -c just unit "Ledger.Replay"` and
+- [X] T005 Run `nix develop --quiet -c just unit "Ledger.Replay"` and
   `./gate.sh`, then commit as
   `fix(replay): derive Byron epochs without EpochInfo horizon`.
 

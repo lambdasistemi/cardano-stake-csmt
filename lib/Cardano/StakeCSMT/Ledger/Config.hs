@@ -10,6 +10,9 @@ module Cardano.StakeCSMT.Ledger.Config
 where
 
 import Cardano.Chain.Genesis qualified as ByronGenesis
+import Cardano.Chain.Slotting
+    ( EpochSlots (..)
+    )
 import Cardano.Chain.UTxO qualified as ByronUTxO
 import Cardano.Chain.Update qualified as ByronUpdate
 import Cardano.Crypto.Hash qualified as ByronHash
@@ -156,6 +159,7 @@ data LedgerConfigBundle = LedgerConfigBundle
     , ledgerConfigTopLevelConfig :: !(TopLevelConfig StakeBlock)
     , ledgerConfigEraHistory :: !(Interpreter (CardanoEras StandardCrypto))
     , ledgerConfigEpochInfo :: !(EpochInfo (Except PastHorizonException))
+    , ledgerConfigByronEpochSlots :: !Word64
     }
 
 ledgerConfigPathsFromDirectory :: FilePath -> LedgerConfigPaths
@@ -172,7 +176,8 @@ loadLedgerConfig :: LedgerConfigPaths -> IO LedgerConfigBundle
 loadLedgerConfig paths = do
     nodeConfig <-
         readJsonFile "node config" (ledgerConfigNodeConfigFile paths)
-    protocolParams <- loadProtocolParams paths nodeConfig
+    (protocolParams, byronEpochSlots) <-
+        loadProtocolParams paths nodeConfig
     let protocolInfo = fst $ protocolInfoCardano @StandardCrypto @IO protocolParams
         topLevelConfig = pInfoConfig protocolInfo
         genesisState = pInfoInitLedger protocolInfo
@@ -189,6 +194,7 @@ loadLedgerConfig paths = do
             , ledgerConfigTopLevelConfig = topLevelConfig
             , ledgerConfigEraHistory = eraHistory
             , ledgerConfigEpochInfo = epochInfo
+            , ledgerConfigByronEpochSlots = byronEpochSlots
             }
 
 ledgerConfigEpochAt :: LedgerConfigBundle -> Word64 -> IO Word64
@@ -275,7 +281,7 @@ instance FromJSON NodeConfig where
 loadProtocolParams
     :: LedgerConfigPaths
     -> NodeConfig
-    -> IO (CardanoProtocolParams StandardCrypto)
+    -> IO (CardanoProtocolParams StandardCrypto, Word64)
 loadProtocolParams paths NodeConfig{..} = do
     byronGenesis <-
         readByronGenesis
@@ -302,8 +308,10 @@ loadProtocolParams paths NodeConfig{..} = do
                 alonzoGenesis
                 conwayGenesis
                 emptyDijkstraGenesis
+    let EpochSlots byronEpochSlots =
+            ByronGenesis.configEpochSlots byronGenesis
     pure
-        CardanoProtocolParams
+        ( CardanoProtocolParams
             { byronProtocolParams =
                 ProtocolParamsByron
                     { byronGenesis = byronGenesis
@@ -350,6 +358,8 @@ loadProtocolParams paths NodeConfig{..} = do
                     then ProtVer (natVersion @11) 0
                     else ProtVer (natVersion @10) 7
             }
+        , byronEpochSlots
+        )
 hardForkTrigger :: Maybe EpochNo -> CardanoHardForkTrigger block
 hardForkTrigger =
     maybe

@@ -4,6 +4,7 @@ module Cardano.StakeCSMT.Ledger.Replay
     , ReplayState (..)
     , ReplayChainSyncRunner
     , ReplayFollowerConfig (..)
+    , byronEpochAt
     , defaultReplayChainSyncRunner
     , initialReplayState
     , observeEpochTransition
@@ -176,32 +177,43 @@ replayBlock
     -> ReplayState
     -> StakeBlock
     -> IO ReplayState
-replayBlock bundle@LedgerConfigBundle{ledgerConfigTopLevelConfig} notify state block = do
-    let previousLedgerState = replayStateLedgerState state
-        diffLedgerState =
-            tickThenReapply
-                OmitLedgerEvents
-                (ExtLedgerCfg ledgerConfigTopLevelConfig)
-                block
-                previousLedgerState
-        nextLedgerState = applyDiffs previousLedgerState diffLedgerState
-        SlotNo slot = blockSlot block
-    epoch <- observedEpochAt bundle slot nextLedgerState
-    observeEpochTransition
-        notify
-        state{replayStateLedgerState = nextLedgerState}
-        slot
-        epoch
+replayBlock
+    LedgerConfigBundle
+        { ledgerConfigByronEpochSlots
+        , ledgerConfigTopLevelConfig
+        }
+    notify
+    state
+    block = do
+        let previousLedgerState = replayStateLedgerState state
+            diffLedgerState =
+                tickThenReapply
+                    OmitLedgerEvents
+                    (ExtLedgerCfg ledgerConfigTopLevelConfig)
+                    block
+                    previousLedgerState
+            nextLedgerState = applyDiffs previousLedgerState diffLedgerState
+            SlotNo slot = blockSlot block
+        epoch <-
+            observedEpochAt
+                ledgerConfigByronEpochSlots
+                slot
+                nextLedgerState
+        observeEpochTransition
+            notify
+            state{replayStateLedgerState = nextLedgerState}
+            slot
+            epoch
 
 observedEpochAt
-    :: LedgerConfigBundle
+    :: Word64
     -> Word64
     -> ExtLedgerState StakeBlock ValuesMK
     -> IO Word64
-observedEpochAt bundle slot extLedgerState =
+observedEpochAt byronEpochSlots slot extLedgerState =
     case ledgerState extLedgerState of
         LedgerStateByron _ ->
-            ledgerConfigEpochAt bundle slot
+            pure $ byronEpochAt byronEpochSlots slot
         LedgerStateShelley st ->
             pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
         LedgerStateAllegra st ->
@@ -216,6 +228,10 @@ observedEpochAt bundle slot extLedgerState =
             pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
         LedgerStateDijkstra st ->
             pure $ epochToWord64 $ nesEL $ shelleyLedgerState st
+
+byronEpochAt :: Word64 -> Word64 -> Word64
+byronEpochAt byronEpochSlots slot =
+    slot `div` byronEpochSlots
 
 epochToWord64 :: EpochNo -> Word64
 epochToWord64 (EpochNo epoch) =
