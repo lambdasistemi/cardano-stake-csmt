@@ -102,6 +102,9 @@
           linux-artifact-smoke = import ./nix/linux-artifact-smoke.nix {
             inherit pkgs system;
           };
+          docker-image = import ./nix/docker-image.nix {
+            inherit pkgs project version;
+          };
         };
         darwinReleasePackages = pkgs.lib.optionalAttrs pkgs.stdenv.isDarwin {
           darwin-release-artifacts = import ./nix/darwin-release.nix {
