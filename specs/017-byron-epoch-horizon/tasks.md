@@ -15,10 +15,10 @@
 
 ## Slice 2 - Finalization
 
-- [ ] T006 Run `just ci` at HEAD.
-- [ ] T007 Run `nix build .#default` at HEAD.
-- [ ] T008 Update PR #36 body with delivered behavior and verification
+- [X] T006 Run `just ci` at HEAD.
+- [X] T007 Run `nix build .#default` at HEAD.
+- [X] T008 Update PR #36 body with delivered behavior and verification
   evidence.
-- [ ] T009 Drop `gate.sh` in
+- [X] T009 Drop `gate.sh` in
   `chore: drop gate.sh (ready for review)`, push, mark PR #36 ready, and report
   `COMPLETE` with PR URL plus head SHA.
